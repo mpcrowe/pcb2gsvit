@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<boardInformation>
+	<material id='1oz_copper'>
+		<thickness>0.0347mmmm</thickness>
+		<relativePermittivity>1.0</relativePermittivity>
+		<conductivity>6.3e7</conductivity>
+	</material>
+	<material id='fr4-60mil'>
+		<thickness>1.524mm</thickness>
+		<relativePermittivity>4.4</relativePermittivity>
+		<conductivity>1e-11</conductivity>
+	</material>
+	<material id='air'>
+		<thickness>7mm</thickness>
+		<relativePermittivity>1.0</relativePermittivity>
+		<conductivity>1e-15</conductivity>
+	</material>
+	<boardStackup>
+		<layer>
+			<name>fill_1</name>
+			<type>air</type>
+			<thickness>3mm</thickness>
+		</layer>
+		<layer>
+			<name>bottom</name>
+			<type>1oz_copper</type>
+		</layer>
+		<layer>
+			<name>outline</name>
+			<type>fr4-60mil</type>
+			<thickness>1.524mm</thickness>
+		</layer>
+		<layer>
+			<name>top</name>
+			<type>1oz_copper</type>
+		</layer>
+		<layer>
+			<name>fill_2</name>
+			<type>air</type>
+			<thickness>10mm</thickness>
+		</layer>
+
+	</boardStackup>
+</boardInformation>   

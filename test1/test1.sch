@@ -1,0 +1,60 @@
+v 20110115 2
+C 0 81900 0 0 0 title-bordered-A.sym
+C 5600 87100 1 0 0 gnd-1.sym
+{
+T 5900 87150 5 10 0 0 0 0 1
+net=GND:1
+}
+C 5600 88400 1 270 0 resistor-1.sym
+{
+T 6000 88100 5 10 0 0 270 0 1
+device=RESISTOR
+T 5800 88200 5 10 1 1 0 0 1
+refdes=R1
+T 6800 88000 5 10 1 1 180 0 1
+internal_pn=GCDC1071
+T 5600 87984 5 10 0 1 180 0 1
+vendor=digikey
+T 5600 87845 5 10 0 1 180 0 1
+Vendor_PN=RHM10.0KHTR-ND
+T 5600 87706 5 10 0 1 180 0 1
+footprint=0603__ROHM
+T 5800 88033 5 10 1 1 0 0 1
+value=10k
+T 5600 87428 5 10 0 1 180 0 1
+class=resistor
+T 5600 87289 5 10 0 1 180 0 1
+description=RES 10.0K OHM 1/10W 1% 0603 SMD
+T 5600 87150 5 10 0 1 180 0 1
+manuf_pn=MCR03EZPFX1002
+T 5600 87012 5 10 0 1 180 0 1
+manufacture=Rohm
+T 5600 86873 5 10 0 1 180 0 1
+Price=24.15
+T 5600 86734 5 10 0 1 180 0 1
+Quan_ea=5000
+T 5600 86595 5 10 0 1 180 0 1
+RoHS=yes
+T 5600 86456 5 10 0 1 180 0 1
+documentation=pdfs/rohm/mcr03.pdf
+}
+C 3200 88500 1 0 0 testpt-1.sym
+{
+T 3300 88900 5 10 1 1 0 0 1
+refdes=START
+T 3200 89200 5 10 0 1 0 0 1
+device=START
+T 3600 89200 5 10 0 1 0 0 1
+footprint=test_point_smt_50
+T 3200 88500 5 10 0 1 0 0 1
+Price=0
+T 3200 88500 5 10 0 1 0 0 1
+Quan_ea=1
+}
+N 5700 87400 5700 87500 4
+N 3300 88500 5700 88500 4
+{
+T 4000 88500 5 10 1 1 0 0 1
+netname=mstrip1
+}
+N 5700 88500 5700 88400 4
