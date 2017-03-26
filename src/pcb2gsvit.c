@@ -10,6 +10,8 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
+#include <unistd.h>
+
 // http://www.xmlsoft.org/examples/xpath2.c
 
 #define MAX_FILENAME 0x200
@@ -18,13 +20,21 @@
 
 int execute_conversion(const char* filename);
 
+#define XPATH_XEM_NAME "/boardInformation/nelmaExport"
 
 int execute_conversion(const char* filename)
 {
 	xmlDocPtr doc;
 	xmlXPathContextPtr xpathCtx;
-//	xmlXPathObjectPtr xpathObj;
+	xmlXPathObjectPtr xpathObj;
 
+	char cwd[0x400];
+
+	if( getcwd(cwd, sizeof(cwd)) == NULL)
+	{
+		perror("getcwd() error");
+		return(-1);
+	}
 
 	// Load XML document
 	doc = xmlParseFile(filename);
@@ -51,7 +61,20 @@ int execute_conversion(const char* filename)
 //		xmlFreeDoc(doc);
 //		return(-1);
 //	}
-fprintf(stderr, "processing complete, no errors encountered\n");
+
+	// Evaluate xpath expression
+	xpathObj = xmlXPathEvalExpression((const xmlChar*)XPATH_XEM_NAME, xpathCtx);
+	if(xpathObj == NULL)
+	{
+		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", XPATH_XEM_NAME);
+		xmlXPathFreeContext(xpathCtx); 
+		xmlFreeDoc(doc); 
+		return(-1);
+	}
+
+
+
+	fprintf(stderr, "processing complete, no errors encountered\n");
 	return(0);
 }
 
