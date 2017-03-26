@@ -51,6 +51,7 @@ int execute_conversion(const char* filename)
 //		xmlFreeDoc(doc);
 //		return(-1);
 //	}
+fprintf(stderr, "processing complete, no errors encountered\n");
 	return(0);
 }
 
