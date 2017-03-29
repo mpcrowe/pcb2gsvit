@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nelma>
+	<comment>Made with PCB Nelma export HID</comment>
+	<genTime>Sat Mar 25 20:34:38 2017</genTime>
+	<space>
+		<comment> **** Space **** </comment>
+		<resolution units="mm">0.025400</resolution>
+		<width>866</width>
+		<height>472</height>
+		<layers>
+			<layer name="bottom">test1.nelma.bottom.png</layer>
+			<layer name="top">test1.nelma.top.png</layer>
+			<layer name="outline">test1.nelma.outline.png</layer>
+			
+		</layers>
+	</space>
+	<nets>
+		<comment>***** Nets ****</comment>
+		<net name="GND">R1.2</net>
+		<net name="mstrip1">R1.1, START.1</net>
+	</nets>
+</nelma>
