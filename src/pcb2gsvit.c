@@ -19,22 +19,39 @@
 #define SVN_REV "found on github at https://github.com/mpcrowe/pcb2gsvit.git"
 
 int execute_conversion(const char* filename);
+char* getNelmaFilename(xmlXPathContextPtr xpathCtx, const char* parentDocName);
 
 #define XPATH_XEM_NAME "//boardInformation/nelmaExport"
-xmlDocPtr getNelmaDoc(xmlXPathContextPtr xpathCtx)
+char* getNelmaFilename(xmlXPathContextPtr xpathCtx, const char* parentDocName)
 {
 	char cwd[0x400];
-	char fullName[0x400];
+	static char fullName[0x400];
 	xmlXPathObjectPtr xpathObj;
 	int size;
 	int i;
 	xmlNodePtr cur;
+	char* preEnd;
 
 	if( getcwd(cwd, sizeof(cwd)) == NULL)
 	{
 		perror("getcwd() error");
 		return(NULL);
 	}
+
+	preEnd = strrchr(parentDocName, '/');
+	if(preEnd != NULL)
+	{
+		char* pstr = (char*)parentDocName;
+		int n = strlen(cwd);
+		char* pdest = &cwd[n];
+		*pdest++ = '/';
+		while(pstr != preEnd)
+		{
+			*pdest++ = *pstr++;
+		}
+		*pdest = '\0';
+	}
+
 	// Evaluate xpath expression
 	xpathObj = xmlXPathEvalExpression((const xmlChar*)XPATH_XEM_NAME, xpathCtx);
 	if(xpathObj == NULL)
@@ -46,7 +63,7 @@ xmlDocPtr getNelmaDoc(xmlXPathContextPtr xpathCtx)
 	xmlNodeSetPtr nodes = xpathObj->nodesetval;
 	
 	size = (nodes) ? nodes->nodeNr : 0;
-	fprintf(stdout, "Result (%d nodes):\n", size);
+//	fprintf(stdout, "Result (%d nodes):\n", size);
 	
 	for(i = 0; i < size; ++i)
 	{
@@ -55,44 +72,45 @@ xmlDocPtr getNelmaDoc(xmlXPathContextPtr xpathCtx)
 			xmlNsPtr ns;
 			ns = (xmlNsPtr)nodes->nodeTab[i];
 			cur = (xmlNodePtr)ns->next;
-			if(cur->ns)
-			{
-				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s:%s\n", 
-				ns->prefix, ns->href, cur->ns->href, cur->name);
-			}
-			else
-			{
-				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s\n", 
-				ns->prefix, ns->href, cur->name);
-			}
+//			if(cur->ns)
+//			{
+//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s:%s\n", 
+//				ns->prefix, ns->href, cur->ns->href, cur->name);
+//			}
+//			else
+//			{
+//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s\n", 
+//				ns->prefix, ns->href, cur->name);
+//			}
 		}
 		else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE)
 		{
 			cur = nodes->nodeTab[i];   	    
 			if(cur->ns)
 			{
-				fprintf(stdout, "= element node \"%s:%s\"\n", cur->ns->href, cur->name);
+//				fprintf(stdout, "= element node \"%s:%s\"\n", cur->ns->href, cur->name);
 			}
 			else
 			{
 				if(cur->children !=NULL)
 				{
 					xmlNodePtr child = cur->children;
-					fprintf(stdout, "has children <%s>\n", child->content);  
+//					fprintf(stdout, "has children <%s>\n", child->content);  
+					sprintf(fullName, "%s/%s",cwd, child->content );
+					return(fullName);
 				}
-				fprintf(stdout, "= element node \"%s\":\"%s\"\n", cur->name, cur->content);
+//				fprintf(stdout, "= element node \"%s\":\"%s\"\n", cur->name, cur->content);
 			}
 		}
 		else
 		{
 			cur = nodes->nodeTab[i];    
-			fprintf(stdout, "= node \"%s\": type %d\n", cur->name, cur->type);
+//			fprintf(stdout, "= node \"%s\": type %d\n", cur->name, cur->type);
 		}
 	}
 	
-	sprintf(fullName, "%s/",cwd );
-	fprintf(stdout,"nelma file \"%s\"\n", fullName);
-return(NULL);
+//	fprintf(stdout,"nelma file \"%s\"\n", fullName);
+	return(NULL);
 //	return(xmlParseFile(fullName));
 }
 
@@ -102,6 +120,7 @@ int execute_conversion(const char* filename)
 	xmlDocPtr doc;
 	xmlXPathContextPtr xpathCtx;
 	xmlDocPtr nelmaDoc;
+	char* nelmaFilename;
 
 	// Load XML document
 	doc = xmlParseFile(filename);
@@ -129,10 +148,17 @@ int execute_conversion(const char* filename)
 	//		return(-1);
 	//	}
 
-	nelmaDoc =  getNelmaDoc(xpathCtx);
-	if(nelmaDoc == NULL)
+	nelmaFilename = getNelmaFilename(xpathCtx, filename);
+	if(nelmaFilename == NULL)
         {
 		goto processingFault;
+	}
+	fprintf(stdout, "%s\n",nelmaFilename);
+	nelmaDoc = xmlParseFile(nelmaFilename);
+	if(nelmaDoc == NULL)
+	{
+		fprintf(stderr, "Error: unable to parse file \"%s\"\n", nelmaFilename);
+		return(-1);
 	}
 
 
