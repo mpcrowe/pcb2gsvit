@@ -19,10 +19,10 @@
 #define SVN_REV "found on github at https://github.com/mpcrowe/pcb2gsvit.git"
 
 int execute_conversion(const char* filename);
-char* getNelmaFilename(xmlXPathContextPtr xpathCtx, const char* parentDocName);
+char* getNelmaFilename(xmlDocPtr doc, xmlXPathContextPtr xpathCtx, const char* parentDocName);
 
 #define XPATH_XEM_NAME "//boardInformation/nelmaExport"
-char* getNelmaFilename(xmlXPathContextPtr xpathCtx, const char* parentDocName)
+char* getNelmaFilename(xmlDocPtr doc, xmlXPathContextPtr xpathCtx, const char* parentDocName)
 {
 	char cwd[0x400];
 	static char fullName[0x400];
@@ -94,9 +94,13 @@ char* getNelmaFilename(xmlXPathContextPtr xpathCtx, const char* parentDocName)
 			{
 				if(cur->children !=NULL)
 				{
-					xmlNodePtr child = cur->children;
+xmlChar* keyword;				
+keyword = xmlNodeListGetString(doc, nodes->nodeTab[i]->xmlChildrenNode, 1);
+printf("keyword: %s\n", keyword);
+//					xmlNodePtr child = cur->children;
 //					fprintf(stdout, "has children <%s>\n", child->content);  
-					sprintf(fullName, "%s/%s",cwd, child->content );
+					sprintf(fullName, "%s/%s",cwd, keyword );
+xmlFree(keyword);                                    
 					return(fullName);
 				}
 //				fprintf(stdout, "= element node \"%s\":\"%s\"\n", cur->name, cur->content);
@@ -148,7 +152,7 @@ int execute_conversion(const char* filename)
 	//		return(-1);
 	//	}
 
-	nelmaFilename = getNelmaFilename(xpathCtx, filename);
+	nelmaFilename = getNelmaFilename(doc, xpathCtx, filename);
 	if(nelmaFilename == NULL)
         {
 		goto processingFault;
