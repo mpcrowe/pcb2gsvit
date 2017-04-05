@@ -7,21 +7,23 @@
 	</gsvit>
 	
 	<comment>this information is unknown by the pcb tool</comment>
-	<material id='1oz_copper'>
-		<thickness>0.0347mmmm</thickness>
-		<relativePermittivity>1.0</relativePermittivity>
-		<conductivity>6.3e7</conductivity>
-	</material>
-	<material id='fr4-60mil'>
-		<thickness>1.524mm</thickness>
-		<relativePermittivity>4.4</relativePermittivity>
-		<conductivity>1e-11</conductivity>
-	</material>
-	<material id='air'>
-		<thickness>7mm</thickness>
-		<relativePermittivity>1.0</relativePermittivity>
-		<conductivity>1e-15</conductivity>
-	</material>
+	<materials>
+		<material id='1oz_copper'>
+			<thickness>0.0347mmmm</thickness>
+			<relativePermittivity>1.0</relativePermittivity>
+			<conductivity>6.3e7</conductivity>
+		</material>
+		<material id='fr4-60mil'>
+			<thickness>1.524mm</thickness>
+			<relativePermittivity>4.4</relativePermittivity>
+			<conductivity>1e-11</conductivity>
+		</material>
+		<material id='air'>
+			<thickness>7mm</thickness>
+			<relativePermittivity>1.0</relativePermittivity>
+			<conductivity>1e-15</conductivity>
+		</material>
+	</materials>
 	<boardStackup>
 		<layer>
 			<name>fill_1</name>

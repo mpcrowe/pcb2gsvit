@@ -176,28 +176,36 @@ int execute_conversion(const char* filename)
 	//		return(-1);
 	//	}
 
+	// get nelma filename
 	nelmaFilename = getNelmaFilename(doc, filename);
 	if(nelmaFilename == NULL)
 	{
 		goto processingFault;
 	}
 	fprintf(stdout, "%s\n",nelmaFilename);
+	
+	// parse nelma file
 	nelmaDoc = xmlParseFile(nelmaFilename);
 	if(nelmaDoc == NULL)
 	{
 		fprintf(stderr, "Error: unable to parse file \"%s\"\n", nelmaFilename);
 		return(-1);
 	}
+
+	// get width, in voxels (pixels)
 	xmlChar* cWidth = xpathSimpleLookup(nelmaDoc,XPATH_NELMA_WIDTH);
 	if(cWidth == NULL)
 		goto processingFault;
+	uint32_t width = strtol((char*)cWidth,NULL,10);
+	xmlFree(cWidth);
+
+	// get height, in voxels (pixels)
 	xmlChar* cHeight = xpathSimpleLookup(nelmaDoc,XPATH_NELMA_HEIGHT);
 	if(cHeight == NULL)
 		goto processingFault;
-		
-	fprintf(stderr,"w:%s: h:%s:\n",cWidth, cHeight);
-	uint32_t width = strtol((char*)cWidth,NULL,10);
 	uint32_t height = strtol((char*)cHeight,NULL,10);
+	xmlFree(cHeight);
+	
 	
 	fprintf(stderr,"w:%d: h:%d:\n",width, height);
 		
