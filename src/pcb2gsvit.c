@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <math.h>
 #include <libxml/xmlreader.h>
@@ -19,17 +20,98 @@
 #define SVN_REV "found on github at https://github.com/mpcrowe/pcb2gsvit.git"
 
 int execute_conversion(const char* filename);
-char* getNelmaFilename(xmlDocPtr doc, xmlXPathContextPtr xpathCtx, const char* parentDocName);
+char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
 
-#define XPATH_XEM_NAME "//boardInformation/nelmaExport"
-char* getNelmaFilename(xmlDocPtr doc, xmlXPathContextPtr xpathCtx, const char* parentDocName)
+xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 {
-	char cwd[0x400];
-	static char fullName[0x400];
+	xmlXPathContextPtr xpathCtx;
 	xmlXPathObjectPtr xpathObj;
+	xmlNodePtr cur;
 	int size;
 	int i;
-	xmlNodePtr cur;
+
+	// Create xpath evaluation context
+	xpathCtx = xmlXPathNewContext(doc);
+	if(xpathCtx == NULL)
+	{
+		fprintf(stderr,"Error: unable to create new XPath context\n");
+		return(NULL);
+	}
+
+	// Register namespaces from list (if any)
+	//	if((nsList != NULL) && (register_namespaces(xpathCtx, nsList) < 0))
+	//	{
+	//		fprintf(stderr,"Error: failed to register namespaces list \"%s\"\n", nsList);
+	//		xmlXPathFreeContext(xpathCtx);
+	//		xmlFreeDoc(doc);
+	//		return(-1);
+	//	}
+	// Evaluate xpath expression
+
+	xpathObj = xmlXPathEvalExpression((const xmlChar*)xpathString, xpathCtx);
+	if(xpathObj == NULL)
+	{
+		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpathString);
+		xmlXPathFreeContext(xpathCtx);
+		return(NULL);
+	}
+	xmlNodeSetPtr nodes = xpathObj->nodesetval;
+
+	size = (nodes) ? nodes->nodeNr : 0;
+
+	for(i = 0; i < size; ++i)
+	{
+		if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL)
+		{
+			xmlNsPtr ns;
+			ns = (xmlNsPtr)nodes->nodeTab[i];
+			cur = (xmlNodePtr)ns->next;
+//			if(cur->ns)
+//			{
+//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s:%s\n",
+//				ns->prefix, ns->href, cur->ns->href, cur->name);
+//			}
+//			else
+//			{
+//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s\n",
+//				ns->prefix, ns->href, cur->name);
+//			}
+		}
+		else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE)
+		{
+			cur = nodes->nodeTab[i];
+			if(cur->ns)
+			{
+			}
+			else
+			{
+				if(cur->children !=NULL)
+				{
+					xmlChar* keyword;
+					keyword = xmlNodeListGetString(doc, nodes->nodeTab[i]->xmlChildrenNode, 1);
+					xmlXPathFreeContext(xpathCtx);
+					return(keyword);
+				}
+			}
+		}
+		else
+		{
+			cur = nodes->nodeTab[i];
+		}
+	}
+	xmlXPathFreeContext(xpathCtx);
+	return(NULL);
+}
+
+
+#define XPATH_XEM_NAME "//boardInformation/nelmaExport"
+#define XPATH_NELMA_WIDTH "//nelma/space/width"
+#define XPATH_NELMA_HEIGHT "//nelma/space/height"
+
+char* getFilenamePath( const char* parentDocName)
+{
+	static char cwd[0x400];
+
 	char* preEnd;
 
 	if( getcwd(cwd, sizeof(cwd)) == NULL)
@@ -52,77 +134,28 @@ char* getNelmaFilename(xmlDocPtr doc, xmlXPathContextPtr xpathCtx, const char* p
 		*pdest = '\0';
 	}
 
-	// Evaluate xpath expression
-	xpathObj = xmlXPathEvalExpression((const xmlChar*)XPATH_XEM_NAME, xpathCtx);
-	if(xpathObj == NULL)
-	{
-		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", XPATH_XEM_NAME);
-		xmlXPathFreeContext(xpathCtx); 
+	return(cwd);
+}
+
+char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName)
+{
+	static char fullName[0x400];
+
+	xmlChar* keyword = xpathSimpleLookup(doc, XPATH_XEM_NAME);
+	if( keyword == NULL)
+		return( NULL);
+	char* cwd = getFilenamePath(parentDocName);
+	if(cwd == NULL)
 		return(NULL);
-	}
-	xmlNodeSetPtr nodes = xpathObj->nodesetval;
-	
-	size = (nodes) ? nodes->nodeNr : 0;
-//	fprintf(stdout, "Result (%d nodes):\n", size);
-	
-	for(i = 0; i < size; ++i)
-	{
-	        if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL)
-	        {
-			xmlNsPtr ns;
-			ns = (xmlNsPtr)nodes->nodeTab[i];
-			cur = (xmlNodePtr)ns->next;
-//			if(cur->ns)
-//			{
-//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s:%s\n", 
-//				ns->prefix, ns->href, cur->ns->href, cur->name);
-//			}
-//			else
-//			{
-//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s\n", 
-//				ns->prefix, ns->href, cur->name);
-//			}
-		}
-		else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE)
-		{
-			cur = nodes->nodeTab[i];   	    
-			if(cur->ns)
-			{
-//				fprintf(stdout, "= element node \"%s:%s\"\n", cur->ns->href, cur->name);
-			}
-			else
-			{
-				if(cur->children !=NULL)
-				{
-xmlChar* keyword;				
-keyword = xmlNodeListGetString(doc, nodes->nodeTab[i]->xmlChildrenNode, 1);
-printf("keyword: %s\n", keyword);
-//					xmlNodePtr child = cur->children;
-//					fprintf(stdout, "has children <%s>\n", child->content);  
-					sprintf(fullName, "%s/%s",cwd, keyword );
-xmlFree(keyword);                                    
-					return(fullName);
-				}
-//				fprintf(stdout, "= element node \"%s\":\"%s\"\n", cur->name, cur->content);
-			}
-		}
-		else
-		{
-			cur = nodes->nodeTab[i];    
-//			fprintf(stdout, "= node \"%s\": type %d\n", cur->name, cur->type);
-		}
-	}
-	
-//	fprintf(stdout,"nelma file \"%s\"\n", fullName);
-	return(NULL);
-//	return(xmlParseFile(fullName));
+	sprintf(fullName, "%s/%s",cwd, keyword );
+	xmlFree(keyword);
+	return(fullName);
 }
 
 
 int execute_conversion(const char* filename)
 {
 	xmlDocPtr doc;
-	xmlXPathContextPtr xpathCtx;
 	xmlDocPtr nelmaDoc;
 	char* nelmaFilename;
 
@@ -131,15 +164,6 @@ int execute_conversion(const char* filename)
 	if (doc == NULL)
 	{
 		fprintf(stderr, "Error: unable to parse file \"%s\"\n", filename);
-		return(-1);
-	}
-
-	// Create xpath evaluation context
-	xpathCtx = xmlXPathNewContext(doc);
-	if(xpathCtx == NULL)
-	{
-		fprintf(stderr,"Error: unable to create new XPath context\n");
-		xmlFreeDoc(doc);
 		return(-1);
 	}
 
@@ -152,9 +176,9 @@ int execute_conversion(const char* filename)
 	//		return(-1);
 	//	}
 
-	nelmaFilename = getNelmaFilename(doc, xpathCtx, filename);
+	nelmaFilename = getNelmaFilename(doc, filename);
 	if(nelmaFilename == NULL)
-        {
+	{
 		goto processingFault;
 	}
 	fprintf(stdout, "%s\n",nelmaFilename);
@@ -164,14 +188,25 @@ int execute_conversion(const char* filename)
 		fprintf(stderr, "Error: unable to parse file \"%s\"\n", nelmaFilename);
 		return(-1);
 	}
-
+	xmlChar* cWidth = xpathSimpleLookup(nelmaDoc,XPATH_NELMA_WIDTH);
+	if(cWidth == NULL)
+		goto processingFault;
+	xmlChar* cHeight = xpathSimpleLookup(nelmaDoc,XPATH_NELMA_HEIGHT);
+	if(cHeight == NULL)
+		goto processingFault;
+		
+	fprintf(stderr,"w:%s: h:%s:\n",cWidth, cHeight);
+	uint32_t width = strtol((char*)cWidth,NULL,10);
+	uint32_t height = strtol((char*)cHeight,NULL,10);
+	
+	fprintf(stderr,"w:%d: h:%d:\n",width, height);
+		
 
 	fprintf(stderr, "processing complete, no errors encountered\n");
 	return(0);
-	
+
 processingFault:
 	fprintf(stderr, "processing fault\n");
-	xmlXPathFreeContext(xpathCtx);
 	xmlFreeDoc(doc);
 	return(-1);
 }
