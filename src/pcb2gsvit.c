@@ -27,7 +27,6 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 	xmlXPathContextPtr xpathCtx;
 	xmlXPathObjectPtr xpathObj;
 	xmlNodePtr cur;
-	int size;
 	int i;
 
 	// Create xpath evaluation context
@@ -49,17 +48,22 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 	// Evaluate xpath expression
 
 	xpathObj = xmlXPathEvalExpression((const xmlChar*)xpathString, xpathCtx);
+	xmlXPathFreeContext(xpathCtx);
 	if(xpathObj == NULL)
 	{
 		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpathString);
-		xmlXPathFreeContext(xpathCtx);
 		return(NULL);
 	}
+	if(xmlXPathNodeSetIsEmpty(xpathObj->nodesetval))
+	{
+		xmlXPathFreeObject(xpathObj);
+		fprintf(stderr,"No result\n");
+		return(NULL);
+	}
+	
 	xmlNodeSetPtr nodes = xpathObj->nodesetval;
 
-	size = (nodes) ? nodes->nodeNr : 0;
-
-	for(i = 0; i < size; ++i)
+	for(i = 0; i < nodes->nodeNr; ++i)
 	{
 		if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL)
 		{
@@ -87,10 +91,7 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 			{
 				if(cur->children !=NULL)
 				{
-					xmlChar* keyword;
-					keyword = xmlNodeListGetString(doc, nodes->nodeTab[i]->xmlChildrenNode, 1);
-					xmlXPathFreeContext(xpathCtx);
-					return(keyword);
+					return(xmlNodeListGetString(doc, nodes->nodeTab[i]->xmlChildrenNode, 1));
 				}
 			}
 		}
@@ -99,15 +100,17 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 			cur = nodes->nodeTab[i];
 		}
 	}
-	xmlXPathFreeContext(xpathCtx);
 	return(NULL);
 }
 
 
 #define XPATH_XEM_NAME "//boardInformation/nelmaExport"
+#define XPATH_XEM_OUTPUT_FILENAME "//boardInformation/gsvit/mediumLinearFilename"
+
 #define XPATH_NELMA_WIDTH "//nelma/space/width"
 #define XPATH_NELMA_HEIGHT "//nelma/space/height"
 
+					
 char* getFilenamePath( const char* parentDocName)
 {
 	static char cwd[0x400];
@@ -137,31 +140,43 @@ char* getFilenamePath( const char* parentDocName)
 	return(cwd);
 }
 
-char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName)
+char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath)
 {
-	static char fullName[0x400];
-
-	xmlChar* keyword = xpathSimpleLookup(doc, XPATH_XEM_NAME);
+	xmlChar* keyword = xpathSimpleLookup(doc, (char*)xpath);
 	if( keyword == NULL)
 		return( NULL);
 	char* cwd = getFilenamePath(parentDocName);
 	if(cwd == NULL)
 		return(NULL);
-	sprintf(fullName, "%s/%s",cwd, keyword );
+	sprintf(dest, "%s/%s",cwd, keyword );
 	xmlFree(keyword);
-	return(fullName);
+	return(dest);
+}
+
+
+char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName)
+{
+	static char fullName[0x400];
+	return(getFilename(doc, parentDocName, fullName, XPATH_XEM_NAME) );
+}
+
+
+char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName)
+{
+	static char fullName[0x400];
+	return( getFilename(doc, parentDocName, fullName, XPATH_XEM_OUTPUT_FILENAME));
 }
 
 
 int execute_conversion(const char* filename)
 {
-	xmlDocPtr doc;
+	xmlDocPtr boardDoc;
 	xmlDocPtr nelmaDoc;
 	char* nelmaFilename;
 
 	// Load XML document
-	doc = xmlParseFile(filename);
-	if (doc == NULL)
+	boardDoc = xmlParseFile(filename);
+	if (boardDoc == NULL)
 	{
 		fprintf(stderr, "Error: unable to parse file \"%s\"\n", filename);
 		return(-1);
@@ -172,12 +187,12 @@ int execute_conversion(const char* filename)
 	//	{
 	//		fprintf(stderr,"Error: failed to register namespaces list \"%s\"\n", nsList);
 	//		xmlXPathFreeContext(xpathCtx);
-	//		xmlFreeDoc(doc);
+	//		xmlFreeDoc(boardDoc);
 	//		return(-1);
 	//	}
 
 	// get nelma filename
-	nelmaFilename = getNelmaFilename(doc, filename);
+	nelmaFilename = getNelmaFilename(boardDoc, filename);
 	if(nelmaFilename == NULL)
 	{
 		goto processingFault;
@@ -205,17 +220,33 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	uint32_t height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
+	fprintf(stdout,"w:%d: h:%d:\n",width, height);
+	
+	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
+	if(mlFname == NULL)
+		goto processingFault;
+		
+	fprintf(stdout,"medium linear filename: %s\n", mlFname);
+
+	FILE* mlfd = fopen(mlFname, "w");
+	if(mlfd == NULL)
+	{
+		fprintf(stderr, "unable to open <%s>\n", mlFname);
+		goto processingFault;
+	}
 	
 	
-	fprintf(stderr,"w:%d: h:%d:\n",width, height);
 		
 
+	fclose(mlfd);
 	fprintf(stderr, "processing complete, no errors encountered\n");
+	xmlFreeDoc(nelmaDoc);
+	xmlFreeDoc(boardDoc);
 	return(0);
 
 processingFault:
 	fprintf(stderr, "processing fault\n");
-	xmlFreeDoc(doc);
+	xmlFreeDoc(boardDoc);
 	return(-1);
 }
 
