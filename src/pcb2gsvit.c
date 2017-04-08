@@ -65,8 +65,10 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 
 	for(i = 0; i < nodes->nodeNr; ++i)
 	{
+//		fprintf(stdout, "i: %d\n",i);
 		if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL)
 		{
+			fprintf(stderr, "namespace dec\n");
 			xmlNsPtr ns;
 			ns = (xmlNsPtr)nodes->nodeTab[i];
 			cur = (xmlNodePtr)ns->next;
@@ -83,6 +85,7 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 		}
 		else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE)
 		{
+//			fprintf(stdout, "element node\n");
 			cur = nodes->nodeTab[i];
 			if(cur->ns)
 			{
@@ -95,8 +98,19 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 				}
 			}
 		}
+		else if( nodes->nodeTab[i]->type == XML_ATTRIBUTE_NODE)
+		{
+//			fprintf(stderr, "attr node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
+			return(xmlNodeGetContent(nodes->nodeTab[i]));
+		}
+		else if( nodes->nodeTab[i]->type == XML_TEXT_NODE)
+		{
+//			fprintf(stderr, "text node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
+			return(xmlNodeGetContent(nodes->nodeTab[i]));
+		}
 		else
 		{
+			fprintf(stderr, "unknown node type %d\n", (nodes->nodeTab[i]->type));
 			cur = nodes->nodeTab[i];
 		}
 	}
@@ -104,12 +118,14 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 }
 
 
-#define XPATH_XEM_NAME "//boardInformation/nelmaExport"
-#define XPATH_XEM_OUTPUT_FILENAME "//boardInformation/gsvit/mediumLinearFilename"
+#define XPATH_XEM_NAME "//boardInformation/nelmaExport/text()"
+#define XPATH_XEM_OUTPUT_FILENAME "//boardInformation/gsvit/mediumLinearFilename/text()"
 
-#define XPATH_NELMA_WIDTH "//nelma/space/width"
-#define XPATH_NELMA_HEIGHT "//nelma/space/height"
-
+#define XPATH_NELMA_WIDTH "//nelma/space/width/text()"
+#define XPATH_NELMA_HEIGHT "//nelma/space/height/text()"
+#define XPATH_NELMA_RES	"//nelma/space/resolution/text()"
+#define XPATH_NELMA_RES_UNITS	"//nelma/space/resolution/@units"
+        		                		
 					
 char* getFilenamePath( const char* parentDocName)
 {
@@ -153,6 +169,30 @@ char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const ch
 	return(dest);
 }
 
+double getXpathDouble(xmlDocPtr doc, char* xpath)
+{
+	// get width, in voxels (pixels)
+	xmlChar* cVal = xpathSimpleLookup(doc,xpath);
+	if(cVal == NULL)
+		return(NAN);
+		
+//	fprintf(stderr,"search result <%s>\n",cVal);
+	double retval = strtod((char*)cVal, NULL);
+	xmlFree(cVal);
+	return(retval);
+}
+
+void getXpathTest(xmlDocPtr doc, char* xpath)
+{
+	// get width, in voxels (pixels)
+	fprintf(stderr,"%s looking for <%s>\n",__FUNCTION__, xpath);
+	xmlChar* cVal = xpathSimpleLookup(doc,xpath);
+	if(cVal == NULL)
+		return;
+		
+	fprintf(stderr,"search result <%s>\n",cVal);
+	xmlFree(cVal);
+}
 
 char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName)
 {
@@ -221,7 +261,15 @@ int execute_conversion(const char* filename)
 	uint32_t height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
 	fprintf(stdout,"w:%d: h:%d:\n",width, height);
-	
+
+	double res = getXpathDouble(nelmaDoc, XPATH_NELMA_RES);
+	if(isnan(res))
+		goto processingFault;	
+	fprintf(stdout, "resolution: %f\n", res);
+
+
+	getXpathTest(nelmaDoc, XPATH_NELMA_RES_UNITS);
+
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
 		goto processingFault;
@@ -234,7 +282,6 @@ int execute_conversion(const char* filename)
 		fprintf(stderr, "unable to open <%s>\n", mlFname);
 		goto processingFault;
 	}
-	
 	
 		
 
