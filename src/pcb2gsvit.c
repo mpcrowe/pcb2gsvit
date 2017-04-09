@@ -118,13 +118,205 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 }
 
 
-#define XPATH_XEM_NAME "//boardInformation/nelmaExport/text()"
-#define XPATH_XEM_OUTPUT_FILENAME "//boardInformation/gsvit/mediumLinearFilename/text()"
+xmlChar* xpathLookupFromNode(xmlNodePtr node, char* xpathString)
+{
+	xmlXPathContextPtr xpathCtx = xmlXPathNewContext( node->doc);
+	
+	xmlXPathObjectPtr xpathObj;
+	xmlNodePtr cur;
+	int i;
 
-#define XPATH_NELMA_WIDTH "//nelma/space/width/text()"
-#define XPATH_NELMA_HEIGHT "//nelma/space/height/text()"
-#define XPATH_NELMA_RES	"//nelma/space/resolution/text()"
-#define XPATH_NELMA_RES_UNITS	"//nelma/space/resolution/@units"
+	//Update the document to set node as root
+	xmlNodePtr myParent = node->parent;
+	xmlNodePtr originalRootElement = xmlDocGetRootElement( node->doc );
+	xmlDocSetRootElement( node->doc, node );
+	
+
+	xpathObj = xmlXPathEvalExpression((const xmlChar*)xpathString, xpathCtx);
+	xmlXPathFreeContext(xpathCtx);
+	if(xpathObj == NULL)
+	{
+		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpathString);
+		//restore the xml document
+		xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
+		xmlAddChild( myParent, node );
+		return(NULL);
+	}
+	if(xmlXPathNodeSetIsEmpty(xpathObj->nodesetval))
+	{
+		xmlXPathFreeObject(xpathObj);
+//		fprintf(stderr,"No result for xpath <%s>\n", xpathString);
+		//restore the xml document
+		xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
+		xmlAddChild( myParent, node );
+		return(NULL);
+	}
+	
+	xmlNodeSetPtr nodes = xpathObj->nodesetval;
+
+	for(i = 0; i < nodes->nodeNr; ++i)
+	{
+//		fprintf(stdout, "i: %d\n",i);
+		if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL)
+		{
+			fprintf(stderr, "namespace dec\n");
+			xmlNsPtr ns;
+			ns = (xmlNsPtr)nodes->nodeTab[i];
+			cur = (xmlNodePtr)ns->next;
+		}
+		else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE)
+		{
+			fprintf(stdout, "element node\n");
+			cur = nodes->nodeTab[i];
+			if(cur->ns)
+			{
+			}
+			else
+			{
+				if(cur->children !=NULL)
+				{
+					//restore the xml document
+					xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
+					xmlAddChild( myParent, node );
+					return(xmlNodeListGetString(originalRootElement->doc, nodes->nodeTab[i]->xmlChildrenNode, 1));
+				}
+			}
+		}
+		else if( nodes->nodeTab[i]->type == XML_ATTRIBUTE_NODE)
+		{
+//			fprintf(stderr, "attr node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
+			//restore the xml document
+			xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
+			xmlAddChild( myParent, node );
+			return(xmlNodeGetContent(nodes->nodeTab[i]));
+		}
+		else if( nodes->nodeTab[i]->type == XML_TEXT_NODE)
+		{
+//			fprintf(stderr, "text node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
+			//restore the xml document
+			xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
+			xmlAddChild( myParent, node );
+			return(xmlNodeGetContent(nodes->nodeTab[i]));
+		}
+		else
+		{
+			fprintf(stderr, "unknown node type %d\n", (nodes->nodeTab[i]->type));
+			cur = nodes->nodeTab[i];
+		}
+	}
+	//restore the xml document
+	xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
+	xmlAddChild( myParent, node );
+	return(NULL);
+}
+
+xmlNodeSetPtr xpathList(xmlDocPtr doc, char* xpathString)
+{
+	xmlXPathContextPtr xpathCtx;
+	xmlXPathObjectPtr xpathObj;
+//	xmlNodePtr cur;
+//	int i;
+
+	// Create xpath evaluation context
+	xpathCtx = xmlXPathNewContext(doc);
+	if(xpathCtx == NULL)
+	{
+		fprintf(stderr,"%s Error: unable to create new XPath context\n", __FUNCTION__);
+		return(NULL);
+	}
+
+	// Register namespaces from list (if any)
+	//	if((nsList != NULL) && (register_namespaces(xpathCtx, nsList) < 0))
+	//	{
+	//		fprintf(stderr,"Error: failed to register namespaces list \"%s\"\n", nsList);
+	//		xmlXPathFreeContext(xpathCtx);
+	//		xmlFreeDoc(doc);
+	//		return(-1);
+	//	}
+	// Evaluate xpath expression
+
+	xpathObj = xmlXPathEvalExpression((const xmlChar*)xpathString, xpathCtx);
+	xmlXPathFreeContext(xpathCtx);
+	if(xpathObj == NULL)
+	{
+		fprintf(stderr,"%sError: unable to evaluate xpath expression \"%s\"\n", __FUNCTION__, xpathString);
+		return(NULL);
+	}
+	if(xmlXPathNodeSetIsEmpty(xpathObj->nodesetval))
+	{
+		xmlXPathFreeObject(xpathObj);
+		fprintf(stderr,"%s No result\n", __FUNCTION__);
+		return(NULL);
+	}
+	
+	xmlNodeSetPtr nodes = xpathObj->nodesetval;
+#if 0
+	for(i = 0; i < nodes->nodeNr; ++i)
+	{
+		fprintf(stdout, "i: %d\n",i);
+		if(nodes->nodeTab[i]->type == XML_NAMESPACE_DECL)
+		{
+			fprintf(stderr, "namespace dec\n");
+			xmlNsPtr ns;
+			ns = (xmlNsPtr)nodes->nodeTab[i];
+			cur = (xmlNodePtr)ns->next;
+//			if(cur->ns)
+//			{
+//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s:%s\n",
+//				ns->prefix, ns->href, cur->ns->href, cur->name);
+//			}
+//			else
+//			{
+//				fprintf(stdout, "= namespace \"%s\"=\"%s\" for node %s\n",
+//				ns->prefix, ns->href, cur->name);
+//			}
+		}
+		else if(nodes->nodeTab[i]->type == XML_ELEMENT_NODE)
+		{
+			fprintf(stdout, "element node\n");
+			cur = nodes->nodeTab[i];
+			if(cur->ns)
+			{
+			}
+			else
+			{
+				if(cur->children !=NULL)
+				{
+//					return(xmlNodeListGetString(doc, nodes->nodeTab[i]->xmlChildrenNode, 1));
+				}
+			}
+		}
+		else if( nodes->nodeTab[i]->type == XML_ATTRIBUTE_NODE)
+		{
+			fprintf(stderr, "attr node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
+//			return(xmlNodeGetContent(nodes->nodeTab[i]));
+		}
+		else if( nodes->nodeTab[i]->type == XML_TEXT_NODE)
+		{
+			fprintf(stderr, "text node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
+//			return(xmlNodeGetContent(nodes->nodeTab[i]));
+		}
+		else
+		{
+			fprintf(stderr, "unknown node type %d\n", (nodes->nodeTab[i]->type));
+			cur = nodes->nodeTab[i];
+		}
+	}
+#endif
+	return(nodes);
+}
+
+
+#define XPATH_XEM_NAME "/boardInformation/nelmaExport/text()"
+#define XPATH_XEM_OUTPUT_FILENAME "/boardInformation/gsvit/mediumLinearFilename/text()"
+#define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
+#define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
+
+
+#define XPATH_NELMA_WIDTH "/nelma/space/width/text()"
+#define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
+#define XPATH_NELMA_RES	"/nelma/space/resolution/text()"
+#define XPATH_NELMA_RES_UNITS	"/nelma/space/resolution/@units"
         		                		
 					
 char* getFilenamePath( const char* parentDocName)
@@ -207,12 +399,31 @@ char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName)
 	return( getFilename(doc, parentDocName, fullName, XPATH_XEM_OUTPUT_FILENAME));
 }
 
+double scaleToMeters(double val, char* units)
+{
+	if(units == NULL)
+		return(val);
+	if(strncmp(units, "mm", 2) == 0)
+		return(val/1000);
+	if(strncmp(units, "mil", 3) == 0)
+		return(val*2.54e-5);
+	if(strncmp(units, "in", 2) == 0)
+		return(val*0.0254);
+	if(strncmp(units, "m", 1) == 0)
+		return(val);
+	if(strncmp(units, "ft", 2) == 0)
+		return(val*0.3048);
+	fprintf(stderr, "Unknown unit prefix of <%s>\n",units);		
+	return(val);		
+}
+
 
 int execute_conversion(const char* filename)
 {
 	xmlDocPtr boardDoc;
 	xmlDocPtr nelmaDoc;
 	char* nelmaFilename;
+	int i;
 
 	// Load XML document
 	boardDoc = xmlParseFile(filename);
@@ -253,34 +464,62 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	uint32_t width = strtol((char*)cWidth,NULL,10);
 	xmlFree(cWidth);
-
 	// get height, in voxels (pixels)
 	xmlChar* cHeight = xpathSimpleLookup(nelmaDoc,XPATH_NELMA_HEIGHT);
 	if(cHeight == NULL)
 		goto processingFault;
 	uint32_t height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
+	
 	fprintf(stdout,"w:%d: h:%d:\n",width, height);
 
+	// get the pixel resolution, in meters per pixel
 	double res = getXpathDouble(nelmaDoc, XPATH_NELMA_RES);
 	if(isnan(res))
 		goto processingFault;	
-	fprintf(stdout, "resolution: %f\n", res);
+	xmlChar* units = xpathSimpleLookup(nelmaDoc, XPATH_NELMA_RES_UNITS);
+	res = scaleToMeters(res, (char*)units);
+	fprintf(stdout, "adjusted res: %g\n", res);
+	
+//	xmlNodeSetPtr xnsMaterials  = xpathList(boardDoc, XPATH_XEM_MATERIALS);
+//	if(xnsMaterials == NULL)
+//		goto processingFault;
 
+	xmlNodeSetPtr xnsLayers  = xpathList(boardDoc, XPATH_XEM_LAYERS);
+	if(xnsLayers == NULL)
+		goto processingFault;
 
-	getXpathTest(nelmaDoc, XPATH_NELMA_RES_UNITS);
-
+	// open the Medium Linear Output file for gsvit
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
 		goto processingFault;
-		
 	fprintf(stdout,"medium linear filename: %s\n", mlFname);
-
 	FILE* mlfd = fopen(mlFname, "w");
 	if(mlfd == NULL)
 	{
-		fprintf(stderr, "unable to open <%s>\n", mlFname);
+		fprintf(stderr, "Unable to open <%s>\n", mlFname);
 		goto processingFault;
+	}
+
+	for(i = 0; i<xnsLayers->nodeNr; i++)
+	{
+		xmlNodePtr currLayer = xnsLayers->nodeTab[i];
+		if(currLayer == NULL)
+		{
+			fclose(mlfd);
+			xmlFreeDoc(nelmaDoc);
+			xmlFreeDoc(boardDoc);
+			return(-1);
+		}
+		
+		xmlChar* layerName = xpathLookupFromNode(currLayer, "//name/text()");
+		fprintf(stdout, "%d name:<%s>\n", i, layerName);
+		xmlChar* materialName = xpathLookupFromNode(currLayer, "//material/text()");
+		fprintf(stdout, "material:<%s>\n",  materialName);
+		xmlChar* cThickness = xpathLookupFromNode(currLayer, "//thickness/text()");
+		fprintf(stdout, "thickness:<%s>\n", cThickness);
+		
+	
 	}
 	
 		

@@ -27,25 +27,25 @@
 	<boardStackup>
 		<layer>
 			<name>fill_1</name>
-			<type>air</type>
+			<material>air</material>
 			<thickness>3mm</thickness>
 		</layer>
 		<layer>
 			<name>bottom</name>
-			<type>1oz_copper</type>
+			<material>1oz_copper</material>
 		</layer>
 		<layer>
 			<name>outline</name>
-			<type>fr4-60mil</type>
+			<material>fr4-60mil</material>
 			<thickness>1.524mm</thickness>
 		</layer>
 		<layer>
 			<name>top</name>
-			<type>1oz_copper</type>
+			<material>1oz_copper</material>
 		</layer>
 		<layer>
 			<name>fill_2</name>
-			<type>air</type>
+			<material>air</material>
 			<thickness>10mm</thickness>
 		</layer>
 
