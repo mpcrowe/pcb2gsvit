@@ -121,34 +121,23 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 xmlChar* xpathLookupFromNode(xmlNodePtr node, char* xpathString)
 {
 	xmlXPathContextPtr xpathCtx = xmlXPathNewContext( node->doc);
-	
 	xmlXPathObjectPtr xpathObj;
 	xmlNodePtr cur;
 	int i;
 
-	//Update the document to set node as root
-	xmlNodePtr myParent = node->parent;
-	xmlNodePtr originalRootElement = xmlDocGetRootElement( node->doc );
-	xmlDocSetRootElement( node->doc, node );
-	
+	xpathCtx->node = node;
 
 	xpathObj = xmlXPathEvalExpression((const xmlChar*)xpathString, xpathCtx);
 	xmlXPathFreeContext(xpathCtx);
 	if(xpathObj == NULL)
 	{
 		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpathString);
-		//restore the xml document
-		xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
-		xmlAddChild( myParent, node );
 		return(NULL);
 	}
 	if(xmlXPathNodeSetIsEmpty(xpathObj->nodesetval))
 	{
 		xmlXPathFreeObject(xpathObj);
 //		fprintf(stderr,"No result for xpath <%s>\n", xpathString);
-		//restore the xml document
-		xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
-		xmlAddChild( myParent, node );
 		return(NULL);
 	}
 	
@@ -175,27 +164,18 @@ xmlChar* xpathLookupFromNode(xmlNodePtr node, char* xpathString)
 			{
 				if(cur->children !=NULL)
 				{
-					//restore the xml document
-					xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
-					xmlAddChild( myParent, node );
-					return(xmlNodeListGetString(originalRootElement->doc, nodes->nodeTab[i]->xmlChildrenNode, 1));
+					return(xmlNodeListGetString(node->doc, nodes->nodeTab[i]->xmlChildrenNode, 1));
 				}
 			}
 		}
 		else if( nodes->nodeTab[i]->type == XML_ATTRIBUTE_NODE)
 		{
 //			fprintf(stderr, "attr node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
-			//restore the xml document
-			xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
-			xmlAddChild( myParent, node );
 			return(xmlNodeGetContent(nodes->nodeTab[i]));
 		}
 		else if( nodes->nodeTab[i]->type == XML_TEXT_NODE)
 		{
 //			fprintf(stderr, "text node <%s>\n", xmlNodeGetContent(nodes->nodeTab[i]));
-			//restore the xml document
-			xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
-			xmlAddChild( myParent, node );
 			return(xmlNodeGetContent(nodes->nodeTab[i]));
 		}
 		else
@@ -204,11 +184,10 @@ xmlChar* xpathLookupFromNode(xmlNodePtr node, char* xpathString)
 			cur = nodes->nodeTab[i];
 		}
 	}
-	//restore the xml document
-	xmlDocSetRootElement( originalRootElement->doc, originalRootElement );
-	xmlAddChild( myParent, node );
 	return(NULL);
 }
+
+
 
 xmlNodeSetPtr xpathList(xmlDocPtr doc, char* xpathString)
 {
@@ -512,12 +491,16 @@ int execute_conversion(const char* filename)
 			return(-1);
 		}
 		
-		xmlChar* layerName = xpathLookupFromNode(currLayer, "//name/text()");
-		fprintf(stdout, "%d name:<%s>\n", i, layerName);
-		xmlChar* materialName = xpathLookupFromNode(currLayer, "//material/text()");
-		fprintf(stdout, "material:<%s>\n",  materialName);
-		xmlChar* cThickness = xpathLookupFromNode(currLayer, "//thickness/text()");
-		fprintf(stdout, "thickness:<%s>\n", cThickness);
+		xmlChar* layerName = xpathLookupFromNode(currLayer, "./name/text()");
+		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
+		xmlChar* materialName = xpathLookupFromNode(currLayer, "./material/text()");
+		fprintf(stdout, "material:<%s> \t",  materialName);
+		xmlChar* cThickness = xpathLookupFromNode(currLayer, "./thickness/text()");
+		if(cThickness != NULL)
+		{
+			fprintf(stdout, "thickness:<%s>", cThickness);
+		}
+		fprintf(stdout, "\n");
 		
 	
 	}
