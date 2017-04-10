@@ -57,7 +57,7 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 	if(xmlXPathNodeSetIsEmpty(xpathObj->nodesetval))
 	{
 		xmlXPathFreeObject(xpathObj);
-		fprintf(stderr,"No result\n");
+		fprintf(stderr,"%s Error No result for xpath %s\n", __FUNCTION__, xpathString);
 		return(NULL);
 	}
 	
@@ -482,6 +482,7 @@ int execute_conversion(const char* filename)
 
 	for(i = 0; i<xnsLayers->nodeNr; i++)
 	{
+		char xpathString[0x400];
 		xmlNodePtr currLayer = xnsLayers->nodeTab[i];
 		if(currLayer == NULL)
 		{
@@ -494,13 +495,42 @@ int execute_conversion(const char* filename)
 		xmlChar* layerName = xpathLookupFromNode(currLayer, "./name/text()");
 		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
 		xmlChar* materialName = xpathLookupFromNode(currLayer, "./material/text()");
+		if(materialName == NULL)
+		{
+			fprintf(stderr, "\nError, no material name specified\n");
+			fclose(mlfd);
+			goto processingFault;
+		}
 		fprintf(stdout, "material:<%s> \t",  materialName);
+			
+				                
+		
 		xmlChar* cThickness = xpathLookupFromNode(currLayer, "./thickness/text()");
 		if(cThickness != NULL)
 		{
 			fprintf(stdout, "thickness:<%s>", cThickness);
 		}
 		fprintf(stdout, "\n");
+
+		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/relativePermittivity/text()", materialName);
+		xmlChar* cEr = xpathSimpleLookup(boardDoc, xpathString);
+		if(cEr == NULL)  
+		{
+			fclose(mlfd);
+			goto processingFault;
+		}
+		fprintf(stdout, "Er: %s\n",  cEr);
+
+		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/conductivity/text()", materialName);
+		xmlChar* cCond = xpathSimpleLookup(boardDoc, xpathString);
+		if(cCond == NULL)  
+		{
+			fclose(mlfd);
+			goto processingFault;
+		}
+
+		fprintf(stdout, "Conductivity: %s\n",  cCond);
+//		createLayer(width, height, )
 		
 	
 	}
