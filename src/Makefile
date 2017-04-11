@@ -8,11 +8,13 @@
 PROJECT = pcb2gsvit
 #DEBUG = --debug
 CC = gcc
-OBJECTS = #gcdcInterface.o ihex.o version.o firmwareUpdater.o
+OBJECTS = fcube.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
 SRCS = $(PROJECT).c
 AUX = Makefile
 PREMADES = 
-LIBS=-lm
+#GWY_CFLAGS=-I/usr/include/gwyddion -I/usr/lib//gwyddion/include
+#GWY_LIBS=-L$/usr/lib -lgwyapp2 -lgwymodule2 -lgwydgets2 -lgwydraw2 -lgwyprocess2 -lgwyddion2
+LIBS=-lm -lglib-2.0 $(GWY_LIBS) -lgomp
 prefix=/usr/local
 bindir=$(prefix)/bin
 INSTALL = /usr/bin/install  
@@ -21,14 +23,14 @@ UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 # do something Linux-y
 LIBUSB_INCLUDE_PATH=/usr/include
-CFLAGS =  -I/usr/include/libxml2 -I$(LIBUSB_INCLUDE_PATH) -Wall
+CFLAGS =  -fopenmp -I/usr/include/libxml2 -I$(LIBUSB_INCLUDE_PATH) -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include $(GWY_CFLAGS) -Wall
 ALIBS = -L$(prefix)/lib $(LIBS) -Wl,-rpath=$(prefix)/lib
 ALIBS_XML = -lxml2
 else
 # windows
 OS_EXTENSION=.exe
 LIBUSB_INCLUDE_PATH=/usr/local/include
-CFLAGS = -I/usr/include -I. -I$(LIBUSB_INCLUDE_PATH) -Wall
+CFLAGS = -I/usr/include -I. -I$(LIBUSB_INCLUDE_PATH)  -Wall
 OBJECTS += windows.o
 ALIBS_XML = /usr/local/lib/libxml2.dll
 endif

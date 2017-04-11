@@ -397,6 +397,7 @@ double scaleToMeters(double val, char* units)
 }
 
 
+
 int execute_conversion(const char* filename)
 {
 	xmlDocPtr boardDoc;
