@@ -13,6 +13,8 @@
 #include <libxml/xpathInternals.h>
 #include <unistd.h>
 
+#include "frect.h"
+
 // http://www.xmlsoft.org/examples/xpath2.c
 
 #define MAX_FILENAME 0x200
@@ -468,7 +470,15 @@ int execute_conversion(const char* filename)
 	xmlNodeSetPtr xnsLayers  = xpathList(boardDoc, XPATH_XEM_LAYERS);
 	if(xnsLayers == NULL)
 		goto processingFault;
-
+	
+	
+	PgFRect* fillLayerEr = PGFrectNew(width, height, res, res, 1);
+//	PgFRect* mu = sv_fcube_new_alike(fillLayerEr, 1);
+//	PgFRect* sigma = sv_fcube_new_alike(fillLayerEr, 1);
+//	PgFRect* sigast = sv_fcube_new_alike(fillLayerEr, 1);
+                                                      
+	fprintf(stdout, "opening output\n");
+	
 	// open the Medium Linear Output file for gsvit
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)

@@ -8,13 +8,14 @@
 PROJECT = pcb2gsvit
 #DEBUG = --debug
 CC = gcc
-OBJECTS = fcube.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
+OBJECTS = frect.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
 SRCS = $(PROJECT).c
 AUX = Makefile
 PREMADES = 
 #GWY_CFLAGS=-I/usr/include/gwyddion -I/usr/lib//gwyddion/include
 #GWY_LIBS=-L$/usr/lib -lgwyapp2 -lgwymodule2 -lgwydgets2 -lgwydraw2 -lgwyprocess2 -lgwyddion2
-LIBS=-lm -lglib-2.0 $(GWY_LIBS) -lgomp
+LIBS=-lm -lglib-2.0 
+# $(GWY_LIBS) -lgomp
 prefix=/usr/local
 bindir=$(prefix)/bin
 INSTALL = /usr/bin/install  
@@ -51,7 +52,7 @@ clean:
 	rm -rf $(PROJECT)$(OS_EXTENSION) $(PROJECT2)$(OS_EXTENSION) *~ $(PROJECT).o $(OBJECTS) doc
 
 $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS)
-	@$(ALINK) -o $@ $(PROJECT).o $(OBJECTS) $(ALIBS) $(ALIBS_XML)
+	$(ALINK) -o $@ $(CFLAGS) $(PROJECT).o $(OBJECTS) $(ALIBS) $(ALIBS_XML)
 	
 %.o: %.c
 	@$(CC) -c $(CFLAGS) $(DEBUG) $<
