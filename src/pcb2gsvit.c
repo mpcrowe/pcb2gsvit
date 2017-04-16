@@ -472,7 +472,8 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	
 	
-	PgFRect* fillLayerEr = PGFrectNew(width, height, res, res, 1);
+	fRect* fillLayerEr = FRECT_New(width, height, res, res, 0);
+	FRECT_Fill(fillLayerEr, 1.0);
 //	PgFRect* mu = sv_fcube_new_alike(fillLayerEr, 1);
 //	PgFRect* sigma = sv_fcube_new_alike(fillLayerEr, 1);
 //	PgFRect* sigast = sv_fcube_new_alike(fillLayerEr, 1);

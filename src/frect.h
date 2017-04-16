@@ -13,13 +13,15 @@ typedef struct {
    gdouble xreal;
    gdouble yreal;
    gfloat **data;
-} PgFRect;
+} fRect;
 
-PgFRect *PGFrectNew(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nullme);
-PgFRect *PGFrectFewAlike   (PgFRect *frect, gboolean nullme);
-void PGFrectFree            (PgFRect *frect);
-void PGFrectFill            (PgFRect *frect, gfloat value);
-void PGFrectAdd             (PgFRect *frect, gfloat value);
-void PGFrectMultiply        (PgFRect *frect, gfloat value);
+fRect* FRECT_New(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nullme);
+fRect* FRECT_FewAlike(fRect *frect, gboolean nullme);
+fRect* FRECT_FewCopy(fRect* dest, fRect src);
+fRect* FRECT_FewClone(fRect src);
+void FRECT_Free            (fRect *frect);
+void FRECT_Fill            (fRect *frect, gfloat value);
+void FRECT_Add             (fRect *frect, gfloat value);
+void FRECT_Multiply        (fRect *frect, gfloat value);
 
 #endif

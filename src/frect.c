@@ -1,105 +1,117 @@
+// frect is a collection of functions to work on a rectangle
+// these rectangle layers are stacked to form a 3-object
+// member access is through ptr->data[x][y]
+// a layer represents a material(s) property, such as permittivity, conductivity
+// use separate 3d spaces of layers for each property
+// this saves space when for example the relative permeability is always the same
+// (for a non-magnetic sytem)
 
-/*
- *  Copyright (C) 2013 Petr Klapetek
- *  E-mail: klapetek@gwyddion.net.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA
- */
-
-/*  fcube.c : 
- *  floating point 3D data representation
- *
- */
 
 #include <stdio.h>
+#include <string.h>
 #include "frect.h"
 
-PgFRect* PGFrectNew(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nullme)
+// allocates memory for a new frect instance
+fRect* FRECT_New(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nullme)
 {
-    gint i;
-    PgFRect *dc = (PgFRect *)g_malloc(sizeof(PgFRect));
+	gint i;
+	fRect *dc = (fRect *)g_malloc(sizeof(fRect));
 
-    dc->xres = xres;
-    dc->yres = yres; 
-    dc->xreal = xreal;
-    dc->yreal = yreal;
-    dc->data= (gfloat **) g_malloc(xres*sizeof(gfloat*));
-    for (i = 0; i < xres; i++)
-    {
-        dc->data[i]= (gfloat* )g_malloc(yres*sizeof(gfloat));
-    }
-    if (nullme) PGFrectFill(dc, 0);
-    return(dc); 
+	dc->xres = xres;
+	dc->yres = yres;
+	dc->xreal = xreal;
+	dc->yreal = yreal;
+	dc->data= (gfloat **) g_malloc(xres*sizeof(gfloat*));
+	for (i = 0; i < xres; i++)
+	{
+		dc->data[i]= (gfloat* )g_malloc(yres*sizeof(gfloat));
+	}
+	if (nullme) FRECT_Fill(dc, 0);
+		return(dc);
 }
 
-PgFRect* PGFrectNewAlike(PgFRect *frect, gboolean nullme)
+// allocate memory for a new rectangle of the same
+// dimensions of an existing one
+fRect* FRECT_NewAlike(fRect *frect, gboolean nullme)
 {
-    return PGFrectNew(frect->xres, frect->yres, frect->xreal, frect->yreal, nullme);
+	return FRECT_New(frect->xres, frect->yres, frect->xreal, frect->yreal, nullme);
 }
 
-void
-PGFrectFree(PgFRect *frect)
+// copies a rectangle from one to another (dimensions must be the same)
+fRect* FRECT_Copy(fRect* dest, fRect* src)
 {
-    gint i;
-    for (i = 0; i < frect->xres; i++)
-    {
-        g_free((void *) frect->data[i]);
-    }
-
-    g_free((void *)frect->data);
-    frect->data=NULL;
+	int i;
+	dest->xres = src->xres;
+	dest->yres = src->yres;
+	dest->xreal = src->xreal;
+	dest->yreal = src->yreal;
+	for (i = 0; i < src->xres; i++)
+	{
+		memcpy(dest->data[i] ,src->data[i], src->yres);
+	}
+	return(dest);
 }
 
-void
-PGFrectFill(PgFRect *frect, gfloat value)
+// create a new instance of a frect that is a copy of the first
+fRect* FRECT_Clone(fRect* src)
 {
-    gint i, j;
-    fprintf(stdout,"%s ready to fill\n", __FUNCTION__);
-    for (i = 0; i < frect->xres; i++)
-    {
-        for (j = 0; j < frect->yres; j++) 
-        {
-                frect->data[i][j] = value;
-        }
-    }
+	fRect* retval = FRECT_NewAlike(src, 0);
+	return(FRECT_Copy(retval, src));
 }
 
-void PGFrectAdd(PgFRect *frect, gfloat value)
+// deconstructor
+void FRECT_Free(fRect *frect)
 {
-    gint i, j;
-    
-    for (i = 0; i < frect->xres; i++)
-    {
-        for (j = 0; j < frect->yres; j++)
-        {
-                frect->data[i][j] += value;
-        }
-    }
+	gint i;
+	for (i = 0; i < frect->xres; i++)
+	{
+		g_free((void *) frect->data[i]);
+	}
+
+	g_free((void *)frect->data);
+	frect->data=NULL;
 }
 
-void PGFrectScale(PgFRect *frect, gfloat value)
+
+void FRECT_Fill(fRect *frect, gfloat value)
 {
-    gint i, j;
-    
-    for (i = 0; i < frect->xres; i++)
-    {
-        for (j = 0; j < frect->yres; j++)
-        {
-                frect->data[i][j] *= value;
-        }
-    }
+	gint i, j;
+	fprintf(stdout,"%s ready to fill\n", __FUNCTION__);
+	for (i = 0; i < frect->xres; i++)
+	{
+		for (j = 0; j < frect->yres; j++)
+		{
+			frect->data[i][j] = value;
+		}
+	}
+}
+
+
+void FRECT_Add(fRect *frect, gfloat value)
+{
+	gint i, j;
+
+	for (i = 0; i < frect->xres; i++)
+	{
+		for (j = 0; j < frect->yres; j++)
+		{
+			frect->data[i][j] += value;
+		}
+	}
+}
+
+
+void FRECT_Scale(fRect *frect, gfloat value)
+{
+	gint i, j;
+
+	for (i = 0; i < frect->xres; i++)
+	{
+		for (j = 0; j < frect->yres; j++)
+		{
+			frect->data[i][j] *= value;
+		}
+	}
 }
 
 
