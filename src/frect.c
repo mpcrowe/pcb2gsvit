@@ -1,10 +1,6 @@
 // frect is a collection of functions to work on a rectangle
 // these rectangle layers are stacked to form a 3-object
 // member access is through ptr->data[x][y]
-// a layer represents a material(s) property, such as permittivity, conductivity
-// use separate 3d spaces of layers for each property
-// this saves space when for example the relative permeability is always the same
-// (for a non-magnetic sytem)
 
 
 #include <stdio.h>
@@ -12,15 +8,13 @@
 #include "frect.h"
 
 // allocates memory for a new frect instance
-fRect* FRECT_New(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nullme)
+fRect* FRECT_New(gint xres, gint yres, gboolean nullme)
 {
 	gint i;
 	fRect *dc = (fRect *)g_malloc(sizeof(fRect));
 
 	dc->xres = xres;
 	dc->yres = yres;
-	dc->xreal = xreal;
-	dc->yreal = yreal;
 	dc->data= (indexSize_t **) g_malloc(xres*sizeof(indexSize_t*));
 	for (i = 0; i < xres; i++)
 	{
@@ -34,7 +28,7 @@ fRect* FRECT_New(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nu
 // dimensions of an existing one
 fRect* FRECT_NewAlike(fRect *frect, gboolean nullme)
 {
-	return FRECT_New(frect->xres, frect->yres, frect->xreal, frect->yreal, nullme);
+	return FRECT_New(frect->xres, frect->yres, nullme);
 }
 
 // copies a rectangle from one to another (dimensions must be the same)
@@ -43,8 +37,6 @@ fRect* FRECT_Copy(fRect* dest, fRect* src)
 	int i;
 	dest->xres = src->xres;
 	dest->yres = src->yres;
-	dest->xreal = src->xreal;
-	dest->yreal = src->yreal;
 	for (i = 0; i < src->xres; i++)
 	{
 		memcpy(dest->data[i] ,src->data[i], src->yres*sizeof(indexSize_t));
