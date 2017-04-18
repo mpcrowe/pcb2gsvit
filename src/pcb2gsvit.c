@@ -62,7 +62,7 @@ xmlChar* xpathSimpleLookup(xmlDocPtr doc, char* xpathString)
 		fprintf(stderr,"%s Error No result for xpath %s\n", __FUNCTION__, xpathString);
 		return(NULL);
 	}
-	
+
 	xmlNodeSetPtr nodes = xpathObj->nodesetval;
 
 	for(i = 0; i < nodes->nodeNr; ++i)
@@ -142,7 +142,7 @@ xmlChar* xpathLookupFromNode(xmlNodePtr node, char* xpathString)
 //		fprintf(stderr,"No result for xpath <%s>\n", xpathString);
 		return(NULL);
 	}
-	
+
 	xmlNodeSetPtr nodes = xpathObj->nodesetval;
 
 	for(i = 0; i < nodes->nodeNr; ++i)
@@ -229,7 +229,7 @@ xmlNodeSetPtr xpathList(xmlDocPtr doc, char* xpathString)
 		fprintf(stderr,"%s No result\n", __FUNCTION__);
 		return(NULL);
 	}
-	
+
 	xmlNodeSetPtr nodes = xpathObj->nodesetval;
 #if 0
 	for(i = 0; i < nodes->nodeNr; ++i)
@@ -298,8 +298,8 @@ xmlNodeSetPtr xpathList(xmlDocPtr doc, char* xpathString)
 #define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
 #define XPATH_NELMA_RES	"/nelma/space/resolution/text()"
 #define XPATH_NELMA_RES_UNITS	"/nelma/space/resolution/@units"
-        		                		
-					
+
+
 char* getFilenamePath( const char* parentDocName)
 {
 	static char cwd[0x400];
@@ -348,7 +348,7 @@ double getXpathDouble(xmlDocPtr doc, char* xpath)
 	xmlChar* cVal = xpathSimpleLookup(doc,xpath);
 	if(cVal == NULL)
 		return(NAN);
-		
+
 //	fprintf(stderr,"search result <%s>\n",cVal);
 	double retval = strtod((char*)cVal, NULL);
 	xmlFree(cVal);
@@ -362,7 +362,7 @@ void getXpathTest(xmlDocPtr doc, char* xpath)
 	xmlChar* cVal = xpathSimpleLookup(doc,xpath);
 	if(cVal == NULL)
 		return;
-		
+
 	fprintf(stderr,"search result <%s>\n",cVal);
 	xmlFree(cVal);
 }
@@ -394,8 +394,8 @@ double scaleToMeters(double val, char* units)
 		return(val);
 	if(strncmp(units, "ft", 2) == 0)
 		return(val*0.3048);
-	fprintf(stderr, "Unknown unit prefix of <%s>\n",units);		
-	return(val);		
+	fprintf(stderr, "Unknown unit prefix of <%s>\n",units);
+	return(val);
 }
 
 
@@ -431,7 +431,7 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	}
 	fprintf(stdout, "%s\n",nelmaFilename);
-	
+
 	// parse nelma file
 	nelmaDoc = xmlParseFile(nelmaFilename);
 	if(nelmaDoc == NULL)
@@ -452,34 +452,35 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	uint32_t height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
-	
+
 	fprintf(stdout,"w:%d: h:%d:\n",width, height);
 
 	// get the pixel resolution, in meters per pixel
 	double res = getXpathDouble(nelmaDoc, XPATH_NELMA_RES);
 	if(isnan(res))
-		goto processingFault;	
+		goto processingFault;
 	xmlChar* units = xpathSimpleLookup(nelmaDoc, XPATH_NELMA_RES_UNITS);
 	res = scaleToMeters(res, (char*)units);
 	fprintf(stdout, "adjusted res: %g\n", res);
-	
-//	xmlNodeSetPtr xnsMaterials  = xpathList(boardDoc, XPATH_XEM_MATERIALS);
-//	if(xnsMaterials == NULL)
-//		goto processingFault;
+
+	xmlNodeSetPtr xnsMaterials  = xpathList(boardDoc, XPATH_XEM_MATERIALS);
+	if(xnsMaterials == NULL)
+		goto processingFault;
+
+	// create the layers that are used as a template
+	// when there is nothing there (air, fill, default)
+
+	fRect* fillLayerEr = FRECT_New(width, height, res, res, 0);
+	FRECT_Fill(fillLayerEr, 1.0);
 
 	xmlNodeSetPtr xnsLayers  = xpathList(boardDoc, XPATH_XEM_LAYERS);
 	if(xnsLayers == NULL)
 		goto processingFault;
-	
-	
-	fRect* fillLayerEr = FRECT_New(width, height, res, res, 0);
-	FRECT_Fill(fillLayerEr, 1.0);
-//	PgFRect* mu = sv_fcube_new_alike(fillLayerEr, 1);
-//	PgFRect* sigma = sv_fcube_new_alike(fillLayerEr, 1);
-//	PgFRect* sigast = sv_fcube_new_alike(fillLayerEr, 1);
-                                                      
+
+
+
 	fprintf(stdout, "opening output\n");
-	
+
 	// open the Medium Linear Output file for gsvit
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
@@ -503,7 +504,7 @@ int execute_conversion(const char* filename)
 			xmlFreeDoc(boardDoc);
 			return(-1);
 		}
-		
+
 		xmlChar* layerName = xpathLookupFromNode(currLayer, "./name/text()");
 		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
 		xmlChar* materialName = xpathLookupFromNode(currLayer, "./material/text()");
@@ -514,9 +515,9 @@ int execute_conversion(const char* filename)
 			goto processingFault;
 		}
 		fprintf(stdout, "material:<%s> \t",  materialName);
-			
-				                
-		
+
+
+
 		xmlChar* cThickness = xpathLookupFromNode(currLayer, "./thickness/text()");
 		if(cThickness != NULL)
 		{
@@ -526,7 +527,7 @@ int execute_conversion(const char* filename)
 
 		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/relativePermittivity/text()", materialName);
 		xmlChar* cEr = xpathSimpleLookup(boardDoc, xpathString);
-		if(cEr == NULL)  
+		if(cEr == NULL)
 		{
 			fclose(mlfd);
 			goto processingFault;
@@ -535,7 +536,7 @@ int execute_conversion(const char* filename)
 
 		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/conductivity/text()", materialName);
 		xmlChar* cCond = xpathSimpleLookup(boardDoc, xpathString);
-		if(cCond == NULL)  
+		if(cCond == NULL)
 		{
 			fclose(mlfd);
 			goto processingFault;
@@ -543,11 +544,11 @@ int execute_conversion(const char* filename)
 
 		fprintf(stdout, "Conductivity: %s\n",  cCond);
 //		createLayer(width, height, )
-		
-	
+
+
 	}
-	
-		
+
+
 
 	fclose(mlfd);
 	fprintf(stderr, "processing complete, no errors encountered\n");

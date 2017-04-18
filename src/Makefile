@@ -8,7 +8,7 @@
 PROJECT = pcb2gsvit
 #DEBUG = --debug
 CC = gcc
-OBJECTS = frect.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
+OBJECTS = frect.o material.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
 SRCS = $(PROJECT).c
 AUX = Makefile
 PREMADES = 

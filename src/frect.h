@@ -6,22 +6,22 @@
  */
 
 #include <glib.h>
+#include <stdint.h>
+#include "material.h"
 
 typedef struct {
    gint xres;
    gint yres;
    gdouble xreal;
    gdouble yreal;
-   gfloat **data;
+   indexSize_t **data;
 } fRect;
 
 fRect* FRECT_New(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nullme);
-fRect* FRECT_FewAlike(fRect *frect, gboolean nullme);
-fRect* FRECT_FewCopy(fRect* dest, fRect src);
-fRect* FRECT_FewClone(fRect src);
-void FRECT_Free            (fRect *frect);
-void FRECT_Fill            (fRect *frect, gfloat value);
-void FRECT_Add             (fRect *frect, gfloat value);
-void FRECT_Multiply        (fRect *frect, gfloat value);
+fRect* FRECT_NewAlike(fRect *frect, gboolean nullme);
+fRect* FRECT_Copy(fRect* dest, fRect* src);
+fRect* FRECT_Clone(fRect* src);
+void FRECT_Free(fRect *frect);
+void FRECT_Fill(fRect *frect, indexSize_t material_index);
 
 #endif

@@ -21,10 +21,10 @@ fRect* FRECT_New(gint xres, gint yres, gdouble xreal, gdouble yreal, gboolean nu
 	dc->yres = yres;
 	dc->xreal = xreal;
 	dc->yreal = yreal;
-	dc->data= (gfloat **) g_malloc(xres*sizeof(gfloat*));
+	dc->data= (indexSize_t **) g_malloc(xres*sizeof(indexSize_t*));
 	for (i = 0; i < xres; i++)
 	{
-		dc->data[i]= (gfloat* )g_malloc(yres*sizeof(gfloat));
+		dc->data[i]= (indexSize_t* )g_malloc(yres*sizeof(indexSize_t));
 	}
 	if (nullme) FRECT_Fill(dc, 0);
 		return(dc);
@@ -47,7 +47,7 @@ fRect* FRECT_Copy(fRect* dest, fRect* src)
 	dest->yreal = src->yreal;
 	for (i = 0; i < src->xres; i++)
 	{
-		memcpy(dest->data[i] ,src->data[i], src->yres);
+		memcpy(dest->data[i] ,src->data[i], src->yres*sizeof(indexSize_t));
 	}
 	return(dest);
 }
@@ -73,7 +73,7 @@ void FRECT_Free(fRect *frect)
 }
 
 
-void FRECT_Fill(fRect *frect, gfloat value)
+void FRECT_Fill(fRect *frect, indexSize_t index)
 {
 	gint i, j;
 	fprintf(stdout,"%s ready to fill\n", __FUNCTION__);
@@ -81,37 +81,8 @@ void FRECT_Fill(fRect *frect, gfloat value)
 	{
 		for (j = 0; j < frect->yres; j++)
 		{
-			frect->data[i][j] = value;
+			frect->data[i][j] = index;
 		}
 	}
 }
-
-
-void FRECT_Add(fRect *frect, gfloat value)
-{
-	gint i, j;
-
-	for (i = 0; i < frect->xres; i++)
-	{
-		for (j = 0; j < frect->yres; j++)
-		{
-			frect->data[i][j] += value;
-		}
-	}
-}
-
-
-void FRECT_Scale(fRect *frect, gfloat value)
-{
-	gint i, j;
-
-	for (i = 0; i < frect->xres; i++)
-	{
-		for (j = 0; j < frect->yres; j++)
-		{
-			frect->data[i][j] *= value;
-		}
-	}
-}
-
-
+   
