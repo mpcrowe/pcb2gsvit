@@ -1,3 +1,6 @@
+/*----------------------------------------------------------------------------
+*        Headers
+*----------------------------------------------------------------------------*/
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <getopt.h>
@@ -16,26 +19,45 @@
 #include "frect.h"
 #include "xpu.h"
 
-// http://www.xmlsoft.org/examples/xpath2.c
 
+/*----------------------------------------------------------------------------
+*        Internal definitions
+*----------------------------------------------------------------------------*/
 #define MAX_FILENAME 0x200
-
 #define SVN_REV "found on github at https://github.com/mpcrowe/pcb2gsvit.git"
-
-int execute_conversion(const char* filename);
-char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
 
 #define XPATH_XEM_NAME "/boardInformation/nelmaExport/text()"
 #define XPATH_XEM_OUTPUT_FILENAME "/boardInformation/gsvit/mediumLinearFilename/text()"
 #define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
 #define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
 
-
 #define XPATH_NELMA_WIDTH "/nelma/space/width/text()"
 #define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
 #define XPATH_NELMA_RES	"/nelma/space/resolution/text()"
 #define XPATH_NELMA_RES_UNITS	"/nelma/space/resolution/@units"
 
+
+/*----------------------------------------------------------------------------
+*        Local variables
+*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------
+*        Local functions
+*----------------------------------------------------------------------------*/
+char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
+char* getFilenamePath( const char* parentDocName);
+char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath);
+char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
+char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName);
+double scaleToMeters(double val, char* units);
+ 	 	   	 	  
+int execute_conversion(const char* filename);
+static void usage(const char *name);
+
+
+/*----------------------------------------------------------------------------
+*        Local functions
+*----------------------------------------------------------------------------*/
 
 char* getFilenamePath( const char* parentDocName)
 {
@@ -65,6 +87,7 @@ char* getFilenamePath( const char* parentDocName)
 
 	return(cwd);
 }
+
 
 char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath)
 {
@@ -128,15 +151,6 @@ int execute_conversion(const char* filename)
 		return(-1);
 	}
 
-	// Register namespaces from list (if any)
-	//	if((nsList != NULL) && (register_namespaces(xpathCtx, nsList) < 0))
-	//	{
-	//		fprintf(stderr,"Error: failed to register namespaces list \"%s\"\n", nsList);
-	//		xmlXPathFreeContext(xpathCtx);
-	//		xmlFreeDoc(boardDoc);
-	//		return(-1);
-	//	}
-
 	// get nelma filename
 	nelmaFilename = getNelmaFilename(boardDoc, filename);
 	if(nelmaFilename == NULL)
@@ -159,6 +173,7 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	uint32_t width = strtol((char*)cWidth,NULL,10);
 	xmlFree(cWidth);
+
 	// get height, in voxels (pixels)
 	xmlChar* cHeight = XPU_SimpleLookup(nelmaDoc,XPATH_NELMA_HEIGHT);
 	if(cHeight == NULL)
@@ -176,9 +191,15 @@ int execute_conversion(const char* filename)
 	res = scaleToMeters(res, (char*)units);
 	fprintf(stdout, "adjusted res: %g\n", res);
 
+	// create the materials table
 	xmlNodeSetPtr xnsMaterials  = XPU_GetNodeSet(boardDoc, XPATH_XEM_MATERIALS);
 	if(xnsMaterials == NULL)
 		goto processingFault;
+
+	MATRL_Init(xnsMaterials->nodeNr);
+	MATRL_CreateTableFromNodeSet(xnsMaterials);
+	
+		
 
 	// create the layers that are used as a template
 	// when there is nothing there (air, fill, default)
@@ -283,6 +304,10 @@ static void usage(const char *name)
 	fprintf(stderr, "analyzed, see https://github.com/mpcrowe/pcb2gsvit.git for how to use\n");
 }
 
+
+/*----------------------------------------------------------------------------
+*        Exported functions
+*----------------------------------------------------------------------------*/
 
 // a command line shell interface
 // all the work is done in a another function
