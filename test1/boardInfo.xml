@@ -9,7 +9,7 @@
 	<comment>this information is unknown by the pcb tool</comment>
 	<materials>
 		<material id='1oz_copper'>
-			<thickness>0.0347mmmm</thickness>
+			<thickness>0.0347mm</thickness>
 			<relativePermittivity>1.0</relativePermittivity>
 			<conductivity>6.3e7</conductivity>
 		</material>
@@ -21,7 +21,7 @@
 		<material id='air'>
 			<thickness>7mm</thickness>
 			<relativePermittivity>1.0</relativePermittivity>
-			<conductivity>1e-15</conductivity>
+			<conductivity>3.0e-15</conductivity>
 		</material>
 	</materials>
 	<boardStackup>

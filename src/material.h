@@ -5,8 +5,8 @@
 
 typedef struct
 {
-  char* name;
-  char* defaultThickness;
+  xmlChar* name;
+  xmlChar* defaultThickness;
   gfloat er;
   gfloat conductivity;
 } material_t;
@@ -16,6 +16,8 @@ extern material_t* materialTable;
 typedef uint16_t indexSize_t;
 
 void MATRL_Init(indexSize_t tableSize);
-void MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials);
+int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials);
+void MATRL_Dump(material_t* mat);
+void MATRL_DumpAll(void);
         
 #endif

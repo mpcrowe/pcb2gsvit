@@ -196,8 +196,10 @@ int execute_conversion(const char* filename)
 	if(xnsMaterials == NULL)
 		goto processingFault;
 
-	MATRL_Init(xnsMaterials->nodeNr);
-	MATRL_CreateTableFromNodeSet(xnsMaterials);
+	if(MATRL_CreateTableFromNodeSet(xnsMaterials) !=0)
+		goto processingFault;
+	
+	MATRL_DumpAll();
 	
 		
 
