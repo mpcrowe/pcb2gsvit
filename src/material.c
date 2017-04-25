@@ -19,7 +19,7 @@
 #include "xpu.h"
 
 material_t* materialTable = NULL;
-int materialTableSize = 0;
+indexSize_t materialTableSize = 0;
 
 
 void MATRL_Init(indexSize_t tableSize)
@@ -40,7 +40,7 @@ void MATRL_Dump(material_t* mat)
 
 void MATRL_DumpAll(void)
 {
-	int i;
+	indexSize_t i;
 	fprintf(stdout,"%s table size: %d\n",__FUNCTION__, materialTableSize);
 	for(i=0;i< materialTableSize; i++)
 	{
@@ -52,8 +52,8 @@ void MATRL_DumpAll(void)
 
 int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 {
-	int i;
-	int j = 1;
+	indexSize_t i;
+	indexSize_t j = 1;
 	if(materialTable == NULL)
 		MATRL_Init(xnsMaterials->nodeNr +1);
 

@@ -8,7 +8,7 @@
 #include "frect.h"
 
 // allocates memory for a new frect instance
-fRect* FRECT_New(gint xres, gint yres, gboolean nullme)
+fRect* FRECT_New(gint xres, gint yres)
 {
 	gint i;
 	fRect *dc = (fRect *)g_malloc(sizeof(fRect));
@@ -20,15 +20,14 @@ fRect* FRECT_New(gint xres, gint yres, gboolean nullme)
 	{
 		dc->data[i]= (indexSize_t* )g_malloc(yres*sizeof(indexSize_t));
 	}
-	if (nullme) FRECT_Fill(dc, 0);
-		return(dc);
+	return(dc);
 }
 
 // allocate memory for a new rectangle of the same
 // dimensions of an existing one
-fRect* FRECT_NewAlike(fRect *frect, gboolean nullme)
+fRect* FRECT_NewAlike(fRect *frect)
 {
-	return FRECT_New(frect->xres, frect->yres, nullme);
+	return FRECT_New(frect->xres, frect->yres);
 }
 
 // copies a rectangle from one to another (dimensions must be the same)
@@ -47,7 +46,7 @@ fRect* FRECT_Copy(fRect* dest, fRect* src)
 // create a new instance of a frect that is a copy of the first
 fRect* FRECT_Clone(fRect* src)
 {
-	fRect* retval = FRECT_NewAlike(src, 0);
+	fRect* retval = FRECT_NewAlike(src);
 	return(FRECT_Copy(retval, src));
 }
 

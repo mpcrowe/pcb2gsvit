@@ -31,6 +31,7 @@
 #define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
 #define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
 
+
 #define XPATH_NELMA_WIDTH "/nelma/space/width/text()"
 #define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
 #define XPATH_NELMA_RES	"/nelma/space/resolution/text()"
@@ -99,6 +100,15 @@ char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const ch
 		return(NULL);
 	sprintf(dest, "%s/%s",cwd, keyword );
 	xmlFree(keyword);
+	return(dest);
+}
+
+char* getLayerFilename(const char* nelmaName, char* dest, char* basename);
+char* getLayerFilename(const char* nelmaName, char* dest, char* basename)
+{
+	strcpy(dest,nelmaName);
+	char* end = strcasestr(dest, ".xem");
+	sprintf(end, ".%s.png", basename );
 	return(dest);
 }
 
@@ -202,17 +212,25 @@ int execute_conversion(const char* filename)
 	MATRL_DumpAll();
 	
 		
-
 	// create the layers that are used as a template
 	// when there is nothing there (air, fill, default)
-
-	fRect* fillLayerEr = FRECT_New(width, height, 0);
+	fRect* fillLayerEr = FRECT_New(width, height);
 	FRECT_Fill(fillLayerEr, 0);
+	
+	// the board outline layer is also special
+	// if it's not there, we assume that the
+	// board dimensions are the same as the height and width
+	char layerFname[0x400];
+	getLayerFilename(nelmaFilename, layerFname, "outline");
+	fprintf(stdout, "outline fname: %s\n",layerFname);
+	
+	
+	
+
 
 	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
 	if(xnsLayers == NULL)
 		goto processingFault;
-
 
 
 	fprintf(stdout, "opening output\n");
