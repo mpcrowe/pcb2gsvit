@@ -18,7 +18,7 @@
 
 #include "frect.h"
 #include "xpu.h"
-
+#include "layer.h"
 
 /*----------------------------------------------------------------------------
 *        Internal definitions
@@ -223,7 +223,13 @@ int execute_conversion(const char* filename)
 	char layerFname[0x400];
 	getLayerFilename(nelmaFilename, layerFname, "outline");
 	fprintf(stdout, "outline fname: %s\n",layerFname);
-	
+	if(LAYER_ReadPng(layerFname))
+	{
+		fprintf(stdout, "warning, no outline layer found\n");
+	}
+	else
+	{
+	}	
 	
 	
 

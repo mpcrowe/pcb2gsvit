@@ -19,21 +19,27 @@ void abort_(const char * s, ...)
 //	abort();
 }
 
-int x, y;
 
-int width, height;
 png_byte color_type;
 png_byte bit_depth;
 
-png_structp png_ptr;
-png_infop info_ptr;
 int number_of_passes;
-png_bytep * row_pointers;
 
+struct image {
+	int width;
+	int height;
+	png_bytep * row_pointers;
+};
+
+struct image img;
+void LAYER_Dump(void );
 
 int LAYER_ReadPng(char* file_name)
 {
+	int y;
 	unsigned char header[8];    // 8 is the maximum size that can be checked
+	png_structp png_ptr;
+	png_infop info_ptr;
 
 	// open file and test for it being a png
 	FILE *fp = fopen(file_name, "rb");
@@ -68,6 +74,10 @@ int LAYER_ReadPng(char* file_name)
 	
 	if (setjmp(png_jmpbuf(png_ptr)))
 	{
+		// Free all of the memory associated with the png_ptr and info_ptr */
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+	                                                   
 		abort_("[read_png_file] Error during init_io");
 		return(-5);
 	}
@@ -77,10 +87,11 @@ int LAYER_ReadPng(char* file_name)
 
 	png_read_info(png_ptr, info_ptr);
 
-	width = png_get_image_width(png_ptr, info_ptr);
-	height = png_get_image_height(png_ptr, info_ptr);
+	img.width = png_get_image_width(png_ptr, info_ptr);
+	img.height = png_get_image_height(png_ptr, info_ptr);
 	color_type = png_get_color_type(png_ptr, info_ptr);
 	bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+	fprintf(stdout, "bit depth %d color type %d \n", bit_depth, color_type);
 
 	number_of_passes = png_set_interlace_handling(png_ptr);
 	png_read_update_info(png_ptr, info_ptr);
@@ -93,12 +104,36 @@ int LAYER_ReadPng(char* file_name)
 		return(-6);
 	}	
 
-	row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
-	for (y=0; y<height; y++)
-		row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
+	img.row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * img.height);
+	for (y=0; y<img.height; y++)
+		img.row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
 
-	png_read_image(png_ptr, row_pointers);
-
+	png_read_image(png_ptr, img.row_pointers);
+	LAYER_Dump();
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	fclose(fp);
 	return(0);
+}
+
+void LAYER_Dump(void)
+{
+        int x;
+        int y;
+        for(x=0;x<100;x++)
+        {
+                for(y=0; y<26; y++)
+                {
+                        fprintf(stdout, "%x ", img.row_pointers[x][y]);
+                }
+                fprintf(stdout,"\n");
+        }        
+}
+
+void LAYER_Done()
+{
+	int y;
+	
+	for (y=0; y<img.height; y++)
+		free(img.row_pointers[y]);
+	free(img.row_pointers);
 }

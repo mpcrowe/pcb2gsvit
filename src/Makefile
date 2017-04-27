@@ -8,13 +8,13 @@
 PROJECT = pcb2gsvit
 #DEBUG = --debug
 CC = gcc
-OBJECTS = xpu.o frect.o material.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
-SRCS = $(PROJECT).c xpu.c frect.c material.c
+OBJECTS = layer.o xpu.o frect.o material.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
+SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c
 AUX = Makefile
 PREMADES = 
 #GWY_CFLAGS=-I/usr/include/gwyddion -I/usr/lib//gwyddion/include
 #GWY_LIBS=-L$/usr/lib -lgwyapp2 -lgwymodule2 -lgwydgets2 -lgwydraw2 -lgwyprocess2 -lgwyddion2
-LIBS=-lm -lglib-2.0 
+LIBS=-lm -lglib-2.0 -lpng
 # $(GWY_LIBS) -lgomp
 prefix=/usr/local
 bindir=$(prefix)/bin
