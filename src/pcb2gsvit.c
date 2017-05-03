@@ -214,12 +214,14 @@ int execute_conversion(const char* filename)
 		
 	// create the layers that are used as a template
 	// when there is nothing there (air, fill, default)
-	fRect* fillLayerEr = FRECT_New(width, height);
-	FRECT_Fill(fillLayerEr, 0);
+	fRect* fillLayer = FRECT_New(width, height);
+	FRECT_Fill(fillLayer, 0);
 	
 	// the board outline layer is also special
 	// if it's not there, we assume that the
 	// board dimensions are the same as the height and width
+	fRect* boardOutlineLayer = NULL;
+
 	char layerFname[0x400];
 	getLayerFilename(nelmaFilename, layerFname, "outline");
 	fprintf(stdout, "outline fname: %s\n",layerFname);
@@ -229,6 +231,8 @@ int execute_conversion(const char* filename)
 	}
 	else
 	{
+		boardOutlineLayer = FRECT_Clone(fillLayer);
+		LAYER_ProcessOutline(boardOutlineLayer, MATRL_GetIndex("outline"));
 	}	
 	
 	

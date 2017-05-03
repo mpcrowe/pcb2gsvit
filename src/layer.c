@@ -33,10 +33,14 @@ struct image {
 	int height;
 	int bit_depth;
 	png_bytep * row_pointers;
+	png_colorp palette;
+	int num_palette;
 };
 
 struct image img;
 void LAYER_Dump(void );
+void LAYER_PaletteDump(void);
+
 png_structp png_ptr;
 png_infop info_ptr;
 
@@ -99,9 +103,12 @@ int LAYER_ReadPng(char* file_name)
 
 	fprintf(stdout, "w: %d  h: %d bit_depth %d\n", img.width, img.height, img.bit_depth);
 	img.row_pointers = png_get_rows(png_ptr, info_ptr);
+	
+	png_get_PLTE(png_ptr, info_ptr, &img.palette, &img.num_palette);
+	LAYER_PaletteDump();	
 	LAYER_Dump();
 
-	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+//	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	fclose(fp);
 	return(0);
 }
@@ -110,17 +117,78 @@ void LAYER_Dump(void)
 {
 	int x;
 	int y;
-	for(x=0;x<100;x++)
+	for(y=0; y<26; y++)
 	{
-		for(y=0; y<26; y++)
+		for(x=0;x<100;x++)
 		{
 			fprintf(stdout, "%x ", img.row_pointers[x][y]);
 		}
 		fprintf(stdout,"\n");
 	}
 }
+void LAYER_PaletteDump(void)
+{
+	int i;
+	fprintf(stdout, "\nnum palette %d\n",img.num_palette);
+	for(i=0;i<img.num_palette;i++)
+	{
+			fprintf(stdout, "%x, %x %x\n", img.palette[i].red, img.palette[i].green, img.palette[i].blue);
+	}
+	fprintf(stdout, "\n");
+}
 
 void LAYER_Done()
 {
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	png_free_data(png_ptr, info_ptr,PNG_FREE_ALL, -1);
+}
+
+
+void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
+{
+	int borderIndex = 1; 	// fixme, need better way 
+	int backgroundIndex = 5; 	// fixme, need better way
+	int x;
+	int y;
+	fprintf(stdout, "processing Outline with border:%d and background: %d\n", borderIndex, backgroundIndex);
+	fprintf(stdout, "processing Outline with x:%d y:%d\n", dest->xres, dest->yres);
+	
+	if(dest->xres != img.width)
+	{
+		fprintf(stderr, "ERROR, xres != width %d != %d\n", dest->xres, img.width);
+		return;
+	}	
+	if(dest->yres != img.height)
+	{
+		fprintf(stderr, "ERROR, yres != height %d != %d\n", dest->yres, img.height);
+		return;
+	}
+	FRECT_Fill(dest, matrlIndex);
+	
+	for(x=0; x<dest->xres; x++)
+	{
+		for(y=0;y<dest->yres;y++)
+		{ 
+			uint8_t pngDatum = img.row_pointers[x/2][y];
+			if((y & 0x001) == 0)
+			{ // even
+				if( ((pngDatum >>4) != backgroundIndex) && ((pngDatum>>4) !=0) )
+				{
+					fprintf(stdout,"even found at x:%d y:%d %x\n", x/2,y, img.row_pointers[x/2][y]);
+					break;
+				}
+			}
+			else
+			{ //	
+				if( ((pngDatum & 0x0f) != backgroundIndex) && (pngDatum != 0))
+				{
+					fprintf(stdout,"odd found at x:%d y:%d %x\n", x/2,y,img.row_pointers[x/2][y]);
+					break;
+				}
+			}
+			dest->data[x][y] = 0;
+		}
+	}
+	fprintf(stdout, "processing Outline completed\n");
+
 }

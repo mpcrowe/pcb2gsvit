@@ -126,3 +126,14 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 	return(0);
 }
 
+indexSize_t MATRL_GetIndex(char* name)
+{
+	indexSize_t retval = 0;
+	for(retval = 0; retval<materialTableSize; retval++)
+	{
+		if(strstr((char*)materialTable[retval].name, name) == 0)
+			return(retval);
+	}
+	fprintf(stderr, "\nError, index not found for <%s>\n", name);
+	return((indexSize_t)(-1));
+}
