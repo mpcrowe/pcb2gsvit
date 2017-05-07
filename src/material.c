@@ -131,7 +131,8 @@ indexSize_t MATRL_GetIndex(char* name)
 	indexSize_t retval = 0;
 	for(retval = 0; retval<materialTableSize; retval++)
 	{
-		if(strstr((char*)materialTable[retval].name, name) == 0)
+//		fprintf(stdout, "%d, tbl:<%s> for<%s>\n",retval, (char*)materialTable[retval].name, name);
+		if(strcmp((char*)materialTable[retval].name, name) == 0)
 			return(retval);
 	}
 	fprintf(stderr, "\nError, index not found for <%s>\n", name);

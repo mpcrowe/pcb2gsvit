@@ -30,7 +30,7 @@
 #define XPATH_XEM_OUTPUT_FILENAME "/boardInformation/gsvit/mediumLinearFilename/text()"
 #define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
 #define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
-
+#define XPATH_XEM_OUTLINE "/boardInformation/boardStackup/layer[name/text()='outline']/material/text()"
 
 #define XPATH_NELMA_WIDTH "/nelma/space/width/text()"
 #define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
@@ -211,7 +211,13 @@ int execute_conversion(const char* filename)
 	
 	MATRL_DumpAll();
 	
-		
+	xmlChar* outlineMaterial = XPU_SimpleLookup(boardDoc, XPATH_XEM_OUTLINE);
+	if(outlineMaterial == NULL)
+	{
+//		fprintf(stderr, "path <%s>\n",XPATH_XEM_OUTLINE);
+		goto processingFault;
+	}
+	
 	// create the layers that are used as a template
 	// when there is nothing there (air, fill, default)
 	fRect* fillLayer = FRECT_New(width, height);
@@ -232,7 +238,7 @@ int execute_conversion(const char* filename)
 	else
 	{
 		boardOutlineLayer = FRECT_Clone(fillLayer);
-		LAYER_ProcessOutline(boardOutlineLayer, MATRL_GetIndex("outline"));
+		LAYER_ProcessOutline(boardOutlineLayer, MATRL_GetIndex((char*)outlineMaterial));
 	}	
 	
 	
