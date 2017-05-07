@@ -43,7 +43,7 @@ void LAYER_PaletteDump(void);
 
 png_structp png_ptr;
 png_infop info_ptr;
-
+#undef USE_LOCAL_MALLOC
 int LAYER_ReadPng(char* file_name)
 {
 	unsigned char header[8];    // 8 is the maximum size that can be checked
@@ -89,20 +89,35 @@ int LAYER_ReadPng(char* file_name)
 	}
 	png_init_io(png_ptr, fp);
 	png_set_sig_bytes(png_ptr, 8);
-	
+
+#ifdef USE_LOCAL_MALLOC
+	png_read_info(png_ptr, info_ptr);
+	img.width = png_get_image_width(png_ptr,info_ptr);
+	img.height = png_get_image_height(png_ptr, info_ptr);
+	img.bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+	int y;
+	img.row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * img.height);
+	for(y = 0; y < img.height; y++)
+	{
+		img.row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr,info_ptr));
+	}
+	png_read_image(png_ptr, img.row_pointers);
+#else
 	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 
 	img.width = png_get_image_width(png_ptr,info_ptr);
 	img.height = png_get_image_height(png_ptr, info_ptr);
 	img.bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-
+#endif
 	color_type = png_get_color_type(png_ptr, info_ptr);
 	interlace_type = png_get_interlace_type(png_ptr, info_ptr);
 	compression_type = png_get_compression_type(png_ptr, info_ptr);
 	filter_method = png_get_filter_type(png_ptr, info_ptr);
 
 	fprintf(stdout, "w: %d  h: %d bit_depth %d\n", img.width, img.height, img.bit_depth);
+#ifndef USE_LOCAL_MALLOC
 	img.row_pointers = png_get_rows(png_ptr, info_ptr);
+#endif
 	
 	png_get_PLTE(png_ptr, info_ptr, &img.palette, &img.num_palette);
 	LAYER_PaletteDump();	
@@ -117,11 +132,17 @@ void LAYER_Dump(void)
 {
 	int x;
 	int y;
-	for(y=0; y<26; y++)
+	fprintf(stdout,"%s %d %d\n", __FUNCTION__, img.width, img.height);
+//	for(y=0; y<26; y++)
+	for(y=0; y<img.height; y++)
 	{
-		for(x=0;x<100;x++)
+//		fprintf(stdout, "rowp %p \n", img.row_pointers);
+		png_bytep row = img.row_pointers[y];
+//		fprintf(stdout, "row %p \n", row);
+//		for(x=0;x<100;x++)
+		for(x=0;x<img.width/2;x++)
 		{
-			fprintf(stdout, "%x ", img.row_pointers[x][y]);
+			fprintf(stdout, "%x ", row[x]);
 		}
 		fprintf(stdout,"\n");
 	}
@@ -164,30 +185,88 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 		return;
 	}
 	FRECT_Fill(dest, matrlIndex);
-	
-	for(x=0; x<dest->xres; x++)
+
+	// top down search for boader
+	fprintf(stdout, "fill top down search\n");
+	int dest_x = 0;
+	for(x=0, dest_x=0; x< img.width/2; x++)
 	{
-		for(y=0;y<dest->yres;y++)
+		for(y=0;y<img.height;y++)
 		{ 
-			uint8_t pngDatum = img.row_pointers[x/2][y];
-			if((y & 0x001) == 0)
-			{ // even
-				if( ((pngDatum >>4) != backgroundIndex) && ((pngDatum>>4) !=0) )
+			uint8_t pngDatum = img.row_pointers[y][x];
+			if( ((pngDatum >>4) != backgroundIndex) )
+			{
+//				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
+				break;
+			}
+			dest->data[dest_x][y] = 0;
+			if(dest_x < dest->xres)
+			{ // odd
+				if( ((pngDatum & 0x0f) != backgroundIndex) )
 				{
-					fprintf(stdout,"even found at x:%d y:%d %x\n", x/2,y, img.row_pointers[x/2][y]);
+//					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
 					break;
 				}
+				dest->data[dest_x+1][y] = 0;
 			}
-			else
-			{ //	
-				if( ((pngDatum & 0x0f) != backgroundIndex) && (pngDatum != 0))
-				{
-					fprintf(stdout,"odd found at x:%d y:%d %x\n", x/2,y,img.row_pointers[x/2][y]);
-					break;
-				}
-			}
-			dest->data[x][y] = 0;
 		}
+		dest_x +=2;
+	}
+
+	// bottom up search for boarder
+	fprintf(stdout, "fill bottom up search\n");
+	dest_x = 0;
+	for(x=0, dest_x=0; x< img.width/2; x++)
+	{
+		for(y=img.height-1;y>=0;y--)
+		{ 
+//			if( dest->data[dest_x][y] == 0) break;
+
+			uint8_t pngDatum = img.row_pointers[y][x];
+			if( ((pngDatum >>4) != backgroundIndex) )
+			{
+				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
+				break;
+			}
+			dest->data[dest_x][y] = 0;
+			if(dest_x < dest->xres)
+			{ // odd
+				if( ((pngDatum & 0x0f) != backgroundIndex) )
+				{
+					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
+					break;
+				}
+				dest->data[dest_x+1][y] = 0;
+			}
+		}
+		dest_x +=2;
+	}
+
+	// left to right search for boarder
+	fprintf(stdout, "left to right search\n");
+	dest_x = 0;
+	for(y=0;y<img.height; y++)
+	{
+		for(x=0, dest_x=0; x< img.width/2; x++)
+		{ 
+			uint8_t pngDatum = img.row_pointers[y][x];
+			if( ((pngDatum >>4) != backgroundIndex) )
+			{
+				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
+				break;
+			}
+			dest->data[dest_x][y] = 0;
+			if(dest_x < dest->xres)
+			{ // odd
+				if( ((pngDatum & 0x0f) != backgroundIndex) )
+				{
+					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
+					break;
+				}
+				dest->data[dest_x+1][y] = 0;
+			}
+		}
+		dest_x +=2;
 	}
 	fprintf(stdout, "processing Outline completed\n");
 
