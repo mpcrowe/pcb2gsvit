@@ -120,8 +120,8 @@ int LAYER_ReadPng(char* file_name)
 #endif
 	
 	png_get_PLTE(png_ptr, info_ptr, &img.palette, &img.num_palette);
-	LAYER_PaletteDump();	
-	LAYER_Dump();
+//	LAYER_PaletteDump();	
+//	LAYER_Dump();
 
 //	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	fclose(fp);
@@ -171,8 +171,8 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	int backgroundIndex = 5; 	// fixme, need better way
 	int x;
 	int y;
-	fprintf(stdout, "processing Outline with border:%d and background: %d\n", borderIndex, backgroundIndex);
-	fprintf(stdout, "processing Outline with x:%d y:%d\n", dest->xres, dest->yres);
+	fprintf(stdout, "\nProcessing Outline with border:%d and background: %d\n", borderIndex, backgroundIndex);
+	fprintf(stdout, "processing Outline with x:%d y:%d mat index:%d\n", dest->xres, dest->yres, matrlIndex);
 	
 	if(dest->xres != img.width)
 	{
@@ -186,13 +186,40 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	}
 	FRECT_Fill(dest, matrlIndex);
 
-	// top down search for boader
-	fprintf(stdout, "fill top down search\n");
+	// top down search for border
+	fprintf(stdout, "\ttop down search\n");
 	int dest_x = 0;
 	for(x=0, dest_x=0; x< img.width/2; x++)
 	{
 		for(y=0;y<img.height;y++)
 		{ 
+			uint8_t pngDatum = img.row_pointers[y][x];
+			if( ((pngDatum >>4) != backgroundIndex) )
+				break;
+			dest->data[dest_x][y] = 0;
+			if(dest_x < dest->xres)
+			{
+				if( ((pngDatum & 0x0f) != backgroundIndex) )
+					break;
+				dest->data[dest_x+1][y] = 0;
+			}
+		}
+		dest_x += 2;
+	}
+
+	// bottom up search for boarder
+	fprintf(stdout, "\tbottom up search\n");
+	dest_x = 0;
+	for(x=0, dest_x=0; x< img.width/2; x++)
+	{
+		for(y=img.height-1;y>=0;y--)
+		{ 
+			if( dest->data[dest_x][y] == 0)
+			{
+//				fprintf(stdout,"preexisting found at x:%d y:%d\n", x,y);
+				break;
+			}
+
 			uint8_t pngDatum = img.row_pointers[y][x];
 			if( ((pngDatum >>4) != backgroundIndex) )
 			{
@@ -201,7 +228,7 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 			}
 			dest->data[dest_x][y] = 0;
 			if(dest_x < dest->xres)
-			{ // odd
+			{
 				if( ((pngDatum & 0x0f) != backgroundIndex) )
 				{
 //					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
@@ -213,37 +240,8 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 		dest_x +=2;
 	}
 
-	// bottom up search for boarder
-	fprintf(stdout, "fill bottom up search\n");
-	dest_x = 0;
-	for(x=0, dest_x=0; x< img.width/2; x++)
-	{
-		for(y=img.height-1;y>=0;y--)
-		{ 
-//			if( dest->data[dest_x][y] == 0) break;
-
-			uint8_t pngDatum = img.row_pointers[y][x];
-			if( ((pngDatum >>4) != backgroundIndex) )
-			{
-				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
-				break;
-			}
-			dest->data[dest_x][y] = 0;
-			if(dest_x < dest->xres)
-			{ // odd
-				if( ((pngDatum & 0x0f) != backgroundIndex) )
-				{
-					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
-					break;
-				}
-				dest->data[dest_x+1][y] = 0;
-			}
-		}
-		dest_x +=2;
-	}
-
 	// left to right search for boarder
-	fprintf(stdout, "left to right search\n");
+	fprintf(stdout, "\tleft to right search\n");
 	dest_x = 0;
 	for(y=0;y<img.height; y++)
 	{
@@ -252,22 +250,48 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 			uint8_t pngDatum = img.row_pointers[y][x];
 			if( ((pngDatum >>4) != backgroundIndex) )
 			{
-				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
+//				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
 				break;
 			}
-			dest->data[dest_x][y] = 0;
+			dest->data[dest_x++][y] = 0;
 			if(dest_x < dest->xres)
 			{ // odd
 				if( ((pngDatum & 0x0f) != backgroundIndex) )
 				{
-					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
+//					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
 					break;
 				}
-				dest->data[dest_x+1][y] = 0;
+				dest->data[dest_x++][y] = 0;
 			}
 		}
-		dest_x +=2;
 	}
+
+	// right to left search for boarder
+	fprintf(stdout, "\tright to left search\n");
+	dest_x = 0;
+	for(y=0;y<img.height; y++)
+	{
+		for(x=img.width/2, dest_x=dest->xres-1; x>=0; x--)
+		{ 
+			uint8_t pngDatum = img.row_pointers[y][x];
+			if( ((pngDatum >>4) != backgroundIndex) )
+			{
+//				fprintf(stdout,"even found at x:%d y:%d %x\n", x,y, pngDatum);
+				break;
+			}
+			dest->data[dest_x--][y] = 0;
+			if(dest_x < dest->xres)
+			{ // odd
+				if( ((pngDatum & 0x0f) != backgroundIndex) )
+				{
+//					fprintf(stdout,"odd found at x:%d y:%d %x\n", x,y, pngDatum);
+					break;
+				}
+				dest->data[dest_x--][y] = 0;
+			}
+		}
+	}
+	
 	fprintf(stdout, "processing Outline completed\n");
 
 }
