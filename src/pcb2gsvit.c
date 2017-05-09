@@ -15,6 +15,7 @@
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 #include <unistd.h>
+#include <glib.h>  // for  using GList
 
 #include "frect.h"
 #include "xpu.h"
@@ -50,7 +51,6 @@ char* getFilenamePath( const char* parentDocName);
 char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath);
 char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
 char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName);
-double scaleToMeters(double val, char* units);
  	 	   	 	  
 int execute_conversion(const char* filename);
 static void usage(const char *name);
@@ -127,25 +127,6 @@ char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName)
 }
 
 
-double scaleToMeters(double val, char* units)
-{
-	if(units == NULL)
-		return(val);
-	if(strncmp(units, "mm", 2) == 0)
-		return(val/1000);
-	if(strncmp(units, "mil", 3) == 0)
-		return(val*2.54e-5);
-	if(strncmp(units, "in", 2) == 0)
-		return(val*0.0254);
-	if(strncmp(units, "m", 1) == 0)
-		return(val);
-	if(strncmp(units, "ft", 2) == 0)
-		return(val*0.3048);
-	fprintf(stderr, "Unknown unit prefix of <%s>\n",units);
-	return(val);
-}
-
-
 int execute_conversion(const char* filename)
 {
 	xmlDocPtr boardDoc;
@@ -198,7 +179,7 @@ int execute_conversion(const char* filename)
 	if(isnan(res))
 		goto processingFault;
 	xmlChar* units = XPU_SimpleLookup(nelmaDoc, XPATH_NELMA_RES_UNITS);
-	res = scaleToMeters(res, (char*)units);
+	res = MATRL_ScaleToMeters(res, (char*)units);
 	fprintf(stdout, "adjusted res: %g\n", res);
 
 	// create the materials table
@@ -227,30 +208,102 @@ int execute_conversion(const char* filename)
 	// if it's not there, we assume that the
 	// board dimensions are the same as the height and width
 	fRect* boardOutlineLayer = NULL;
-
 	char layerFname[0x400];
 	getLayerFilename(nelmaFilename, layerFname, "outline");
 	fprintf(stdout, "outline fname: %s\n",layerFname);
 	if(LAYER_ReadPng(layerFname))
 	{
-		fprintf(stdout, "warning, no outline layer found\n");
+		fprintf(stdout, "warning, no outline layer found, using default fill(air) for board values\n");
+		boardOutlineLayer = FRECT_Clone(fillLayer);
 	}
 	else
 	{
 		boardOutlineLayer = FRECT_Clone(fillLayer);
 		LAYER_ProcessOutline(boardOutlineLayer, MATRL_GetIndex((char*)outlineMaterial));
 	}	
-	
-	
 
-
+	
+	// get the layers from the board document
 	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
 	if(xnsLayers == NULL)
 		goto processingFault;
+		
+	// for each layer, create a unique layer unless it already exists (fill and outline layers)
+	GList* gLayers = NULL;
+	for(i = 0; i<xnsLayers->nodeNr; i++)
+	{
+//		char xpathString[0x400];
+		xmlNodePtr currLayer = xnsLayers->nodeTab[i];
+		if(currLayer == NULL)
+		{
+			xmlFreeDoc(nelmaDoc);
+			xmlFreeDoc(boardDoc);
+			return(-1);
+		}
+
+		// get the layer name
+		xmlChar* layerName = XPU_LookupFromNode(currLayer, "./name/text()");
+		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
+		
+		// get the material name and material index (from the name)
+		xmlChar* materialName = XPU_LookupFromNode(currLayer, "./material/text()");
+		if(materialName == NULL)
+		{
+			fprintf(stderr, "\nError, no material name specified\n");
+			goto processingFault;
+		}
+		fprintf(stdout, "material:<%s> \t",  materialName);
+		int mIndex = MATRL_GetIndex((char*)materialName);
+		if(mIndex < 0)
+		{
+			goto processingFault;
+		}
+		fprintf(stdout, "\tmaterial Index: %d\n", mIndex);
+
+		// get the thickness of the layer
+		xmlChar* cThickness = XPU_LookupFromNode(currLayer, "./thickness/text()");
+		if(cThickness == NULL)
+		{
+			cThickness = MATRL_DefaultThickness(mIndex);
+			fprintf(stdout, "WARN, using default thickness %s\n",cThickness);
+		}
+		if(cThickness == NULL)
+		{
+			fprintf(stderr, "ERROR, no thickness or default thickness defined\n");
+			goto processingFault;
+		}
+		int zVoxelCount = MATRL_StringToCounts((char*)cThickness, res);
+		if(zVoxelCount <=0)
+		{
+			goto processingFault;
+		}
+		fprintf(stdout, "\tvoxel count, z-axis: %d\n", zVoxelCount);
+		
+		
+//		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/relativePermittivity/text()", materialName);
+//		xmlChar* cEr = XPU_SimpleLookup(boardDoc, xpathString);
+//		if(cEr == NULL)
+//		{
+//			goto processingFault;
+//		}
+//		fprintf(stdout, "Er: %s\t",  cEr);
+//
+//		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/conductivity/text()", materialName);
+//		xmlChar* cCond = XPU_SimpleLookup(boardDoc, xpathString);
+//		if(cCond == NULL)
+//		{
+//			goto processingFault;
+//		}
+//
+//		fprintf(stdout, "Conductivity: %s\n",  cCond);
+		gLayers = g_list_prepend(gLayers, "hello");
+
+		fprintf(stdout, "\n");
+//		createLayer(width, height, )
+	}
 
 
 	fprintf(stdout, "opening output\n");
-
 	// open the Medium Linear Output file for gsvit
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
@@ -261,61 +314,6 @@ int execute_conversion(const char* filename)
 	{
 		fprintf(stderr, "Unable to open <%s>\n", mlFname);
 		goto processingFault;
-	}
-
-	for(i = 0; i<xnsLayers->nodeNr; i++)
-	{
-		char xpathString[0x400];
-		xmlNodePtr currLayer = xnsLayers->nodeTab[i];
-		if(currLayer == NULL)
-		{
-			fclose(mlfd);
-			xmlFreeDoc(nelmaDoc);
-			xmlFreeDoc(boardDoc);
-			return(-1);
-		}
-
-		xmlChar* layerName = XPU_LookupFromNode(currLayer, "./name/text()");
-		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
-		xmlChar* materialName = XPU_LookupFromNode(currLayer, "./material/text()");
-		if(materialName == NULL)
-		{
-			fprintf(stderr, "\nError, no material name specified\n");
-			fclose(mlfd);
-			goto processingFault;
-		}
-		fprintf(stdout, "material:<%s> \t",  materialName);
-
-
-
-		xmlChar* cThickness = XPU_LookupFromNode(currLayer, "./thickness/text()");
-		if(cThickness != NULL)
-		{
-			fprintf(stdout, "thickness:<%s>", cThickness);
-		}
-		fprintf(stdout, "\n");
-
-		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/relativePermittivity/text()", materialName);
-		xmlChar* cEr = XPU_SimpleLookup(boardDoc, xpathString);
-		if(cEr == NULL)
-		{
-			fclose(mlfd);
-			goto processingFault;
-		}
-		fprintf(stdout, "Er: %s\n",  cEr);
-
-		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/conductivity/text()", materialName);
-		xmlChar* cCond = XPU_SimpleLookup(boardDoc, xpathString);
-		if(cCond == NULL)
-		{
-			fclose(mlfd);
-			goto processingFault;
-		}
-
-		fprintf(stdout, "Conductivity: %s\n",  cCond);
-//		createLayer(width, height, )
-
-
 	}
 
 

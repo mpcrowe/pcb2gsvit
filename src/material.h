@@ -21,11 +21,15 @@ void MATRL_Init(indexSize_t tableSize);
 int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials);
 void MATRL_Dump(material_t* mat);
 void MATRL_DumpAll(void);
-indexSize_t MATRL_GetIndex(char* name);
+int MATRL_GetIndex(char* name);
+int MATRL_StringToCounts(char* pString, double metersPerPixel);
+double MATRL_ScaleToMeters(double val, char* units);
+
 
 // these need to be fast lookup macros as they are used over and over again
 // when constructing the z-axix line of data
 #define MATRL_Er(index) (materialTable[index].er)
 #define MATRL_Cond(index) (materialTable[index].conductivity)
+#define MATRL_DefaultThickness(index) (materialTable[index].defaultThickness)
         
 #endif

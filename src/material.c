@@ -12,6 +12,8 @@
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 #include <unistd.h>
+#include <ctype.h>	// for isdigit()
+#include <stdlib.h>	// for atof()
 
 #include <glib.h>
 
@@ -126,7 +128,7 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 	return(0);
 }
 
-indexSize_t MATRL_GetIndex(char* name)
+int MATRL_GetIndex(char* name)
 {
 	indexSize_t retval = 0;
 	for(retval = 0; retval<materialTableSize; retval++)
@@ -138,3 +140,49 @@ indexSize_t MATRL_GetIndex(char* name)
 	fprintf(stderr, "\nError, index not found for <%s>\n", name);
 	return((indexSize_t)(-1));
 }
+
+// returns the value converted to meters
+double MATRL_ScaleToMeters(double val, char* units) 
+{
+	if(units == NULL)
+		return(val);
+	if(strncmp(units, "mm", 2) == 0)
+		return(val/1000);
+	if(strncmp(units, "mil", 3) == 0)
+		return(val*2.54e-5);
+	if(strncmp(units, "in", 2) == 0)
+		return(val*0.0254);
+	if(strncmp(units, "m", 1) == 0)
+		return(val);
+	if(strncmp(units, "ft", 2) == 0)
+		return(val*0.3048);
+	fprintf(stderr, "Unknown unit prefix of <%s>\n",units);
+		return(val);
+}
+
+#define isFloatDigit(x) (isdigit(x) || (x == 'e') || (x == 'E') || (x=='.') || (x=='+') || (x==' ') || (x=='-'))
+
+int MATRL_StringToCounts(char* pString, double metersPerPixel)
+{
+	char* pend;
+	pend = pString;
+	if(pend == NULL)
+		return(-1);
+//	fprintf(stdout, "%s <%s>\n",__FUNCTION__, pString);
+	while(	(*pend != '\0') && isFloatDigit(*pend))
+	{
+		pend++;
+	}
+	double tempf = atof(pString);
+	if(*pend == 0)
+		return((int)(tempf/metersPerPixel));  // no units means thickness is in meters
+
+	double retvalf = MATRL_ScaleToMeters( tempf, pend);
+	int retval = (int)(retvalf/metersPerPixel);
+	if(retval == 0) retval = 1;
+//	fprintf(stdout, "%f, %f %d, <%s>\n", tempf, retvalf, retval, pend);
+	return(retval);	
+	
+//	return(-1);
+}
+		
