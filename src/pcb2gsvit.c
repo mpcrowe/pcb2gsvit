@@ -133,7 +133,9 @@ int execute_conversion(const char* filename)
 	xmlDocPtr nelmaDoc;
 	char* nelmaFilename;
 	int i;
-
+	int j;
+	int k;
+	int retval;
 	// Load XML document
 	boardDoc = xmlParseFile(filename);
 	if (boardDoc == NULL)
@@ -162,14 +164,14 @@ int execute_conversion(const char* filename)
 	xmlChar* cWidth = XPU_SimpleLookup(nelmaDoc,XPATH_NELMA_WIDTH);
 	if(cWidth == NULL)
 		goto processingFault;
-	uint32_t width = strtol((char*)cWidth,NULL,10);
+	gint width = strtol((char*)cWidth,NULL,10);
 	xmlFree(cWidth);
 
 	// get height, in voxels (pixels)
 	xmlChar* cHeight = XPU_SimpleLookup(nelmaDoc,XPATH_NELMA_HEIGHT);
 	if(cHeight == NULL)
 		goto processingFault;
-	uint32_t height = strtol((char*)cHeight,NULL,10);
+	gint height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
 
 	fprintf(stdout,"w:%d: h:%d:\n",width, height);
@@ -227,11 +229,13 @@ int execute_conversion(const char* filename)
 	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
 	if(xnsLayers == NULL)
 		goto processingFault;
-		
+	
+	fprintf(stdout, "layer processing\n");	
 	// for each layer, create a unique layer unless it already exists (fill and outline layers)
 	GList* gLayers = NULL;
 	for(i = 0; i<xnsLayers->nodeNr; i++)
 	{
+		fRect* fRectCurrent;
 //		char xpathString[0x400];
 		xmlNodePtr currLayer = xnsLayers->nodeTab[i];
 		if(currLayer == NULL)
@@ -243,6 +247,10 @@ int execute_conversion(const char* filename)
 
 		// get the layer name
 		xmlChar* layerName = XPU_LookupFromNode(currLayer, "./name/text()");
+		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
+
+		// get the base type fill or outline or null
+		xmlChar* baseType = XPU_LookupFromNode(currLayer, "./baseType/text()");
 		fprintf(stdout, "%d name:<%s>  \t", i, layerName);
 		
 		// get the material name and material index (from the name)
@@ -279,6 +287,24 @@ int execute_conversion(const char* filename)
 		}
 		fprintf(stdout, "\tvoxel count, z-axis: %d\n", zVoxelCount);
 		
+		if(baseType ==NULL)
+		{ // no base line type, must be a premade type
+			if(strstr("outline", (char*)layerName) != NULL)
+				fRectCurrent = boardOutlineLayer;
+			else
+				fRectCurrent = fillLayer;
+		}
+		else
+		{
+			if(strstr("outline", (char*)baseType) != NULL)
+				fRectCurrent = FRECT_Clone(boardOutlineLayer);
+			else
+				fRectCurrent = FRECT_Clone(fillLayer);
+			fprintf(stdout, "need to process a real layer of traces for: %s\n", layerName);
+		}
+		for(k=0; k< zVoxelCount; k++)
+			gLayers = g_list_prepend(gLayers, fRectCurrent);
+			
 		
 //		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/relativePermittivity/text()", materialName);
 //		xmlChar* cEr = XPU_SimpleLookup(boardDoc, xpathString);
@@ -296,14 +322,20 @@ int execute_conversion(const char* filename)
 //		}
 //
 //		fprintf(stdout, "Conductivity: %s\n",  cCond);
-		gLayers = g_list_prepend(gLayers, "hello");
 
 		fprintf(stdout, "\n");
 //		createLayer(width, height, )
 	}
 
+	gLayers = g_list_reverse(gLayers);
+	gint depth =  g_list_length(gLayers);
 
-	fprintf(stdout, "opening output\n");
+	float* fSlice = (float*)malloc(sizeof(float)*depth);
+	if( fSlice == NULL)
+		goto processingFault;
+	
+	
+	fprintf(stdout, "\nLayer processing complete\nOpening output\n");
 	// open the Medium Linear Output file for gsvit
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
@@ -314,6 +346,60 @@ int execute_conversion(const char* filename)
 	{
 		fprintf(stderr, "Unable to open <%s>\n", mlFname);
 		goto processingFault;
+	}
+	fprintf(stdout, "x:%d, y:%d z:%d  0x%x 0x%x 0x%x\n", width, height, depth, width, height, depth);
+	fwrite(&width, sizeof(gint),1,mlfd);
+	fwrite(&height, sizeof(gint),1,mlfd);
+	retval = fwrite(&depth, sizeof(gint),1,mlfd);
+	if(retval != 1)
+	{
+		fprintf(stderr, "Write error %d!= 1\n",retval);
+		goto processingFault;
+	}
+	fprintf(stdout, "starting Er\n");		
+	for(i=0; i<width; i++)
+	{
+		for(j=0; j<height; j++)
+		{
+			float* pSlice = fSlice;
+			GList *l;
+			for (l = gLayers; l != NULL; l = l->next)
+			{
+				// do something with l->data
+				int index = ((fRect*)(l->data))->data[i][j];
+				*pSlice++ = MATRL_Er(index);
+			}
+			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+			if(retval != depth)
+			{
+				fprintf(stderr, "file write error %d!=%d", retval, depth);
+				goto processingFault;
+			}
+			
+		}
+	}
+
+	fprintf(stdout, "starting conductivity\n");		
+	for(i=0; i<width; i++)
+	{
+		for(j=0; j<height; j++)
+		{
+			float* pSlice = fSlice;
+			GList *l;
+			for (l = gLayers; l != NULL; l = l->next)
+			{
+				// do something with l->data
+				int index = ((fRect*)(l->data))->data[i][j];
+				*pSlice++ = MATRL_Cond(index);
+			}
+			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+			if(retval != depth)
+			{
+				fprintf(stderr, "file write error %d!=%d", retval, depth);
+				goto processingFault;
+			}
+			
+		}
 	}
 
 
