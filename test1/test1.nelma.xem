@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nelma>
 	<comment>Made with PCB Nelma export HID</comment>
-	<genTime>Sat Mar 25 20:34:38 2017</genTime>
+	<genTime>Thu May 18 08:54:33 2017</genTime>
 	<space>
 		<comment> **** Space **** </comment>
-		<resolution units="mm">0.025400</resolution>
-		<width>866</width>
-		<height>472</height>
+		<resolution units="mm">0.127000</resolution>
+		<width>173</width>
+		<height>94</height>
 		<layers>
-			<layer name="bottom">test1.nelma.bottom.png</layer>
-			<layer name="top">test1.nelma.top.png</layer>
-			<layer name="outline">test1.nelma.outline.png</layer>
+			<layer name="bottom">/home/crowe/mc/pcb2gsvit/test1/test1.nelma.bottom.png</layer>
+			<layer name="top">/home/crowe/mc/pcb2gsvit/test1/test1.nelma.top.png</layer>
+			<layer name="outline">/home/crowe/mc/pcb2gsvit/test1/test1.nelma.outline.png</layer>
 			
 		</layers>
 	</space>
