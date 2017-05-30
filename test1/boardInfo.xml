@@ -48,7 +48,7 @@
 		<layer>
 			<name>fill_2</name>
 			<material>air</material>
-			<thickness>1mm</thickness>
+			<thickness>2mm</thickness>
 		</layer>
 	</boardStackup>
 </boardInformation>   
