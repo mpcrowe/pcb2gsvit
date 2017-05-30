@@ -300,7 +300,21 @@ int execute_conversion(const char* filename)
 				fRectCurrent = FRECT_Clone(boardOutlineLayer);
 			else
 				fRectCurrent = FRECT_Clone(fillLayer);
-			fprintf(stdout, "need to process a real layer of traces for: %s\n", layerName);
+			fprintf(stdout, "WARNING: need to process a real layer of traces for: %s\n", layerName);
+			getLayerFilename(nelmaFilename, layerFname, (char*)layerName);
+			fprintf(stdout, ": %s\n",layerFname);
+			if(LAYER_ReadPng(layerFname))
+			{
+				fprintf(stdout, "warning, no layer found, using default fill(air) for board values\n");
+			}
+			else
+			{
+				LAYER_ProcessLayer(fRectCurrent, mIndex);
+			}	
+
+			
+// process a copper layer here			
+			
 		}
 		for(k=0; k< zVoxelCount; k++)
 			gLayers = g_list_prepend(gLayers, fRectCurrent);
