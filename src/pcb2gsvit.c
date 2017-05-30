@@ -348,15 +348,16 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	}
 	fprintf(stdout, "x:%d, y:%d z:%d  0x%x 0x%x 0x%x\n", width, height, depth, width, height, depth);
-	fwrite(&width, sizeof(gint),1,mlfd);
-	fwrite(&height, sizeof(gint),1,mlfd);
-	retval = fwrite(&depth, sizeof(gint),1,mlfd);
+	fwrite(&width, sizeof(gint), 1, mlfd);
+	fwrite(&height, sizeof(gint), 1, mlfd);
+	retval = fwrite(&depth, sizeof(gint) ,1, mlfd);
 	if(retval != 1)
 	{
 		fprintf(stderr, "Write error %d!= 1\n",retval);
 		goto processingFault;
 	}
-	fprintf(stdout, "starting Er\n");		
+	fprintf(stdout, "starting Er\n");
+	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
 	for(i=0; i<width; i++)
 	{
 		for(j=0; j<height; j++)
