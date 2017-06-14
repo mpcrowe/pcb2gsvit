@@ -300,7 +300,21 @@ int execute_conversion(const char* filename)
 				fRectCurrent = FRECT_Clone(boardOutlineLayer);
 			else
 				fRectCurrent = FRECT_Clone(fillLayer);
-			fprintf(stdout, "need to process a real layer of traces for: %s\n", layerName);
+			fprintf(stdout, "WARNING: need to process a real layer of traces for: %s\n", layerName);
+			getLayerFilename(nelmaFilename, layerFname, (char*)layerName);
+			fprintf(stdout, ": %s\n",layerFname);
+			if(LAYER_ReadPng(layerFname))
+			{
+				fprintf(stdout, "warning, no layer found, using default fill(air) for board values\n");
+			}
+			else
+			{
+				LAYER_ProcessLayer(fRectCurrent, mIndex);
+			}	
+
+			
+// process a copper layer here			
+			
 		}
 		for(k=0; k< zVoxelCount; k++)
 			gLayers = g_list_prepend(gLayers, fRectCurrent);
@@ -348,15 +362,16 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	}
 	fprintf(stdout, "x:%d, y:%d z:%d  0x%x 0x%x 0x%x\n", width, height, depth, width, height, depth);
-	fwrite(&width, sizeof(gint),1,mlfd);
-	fwrite(&height, sizeof(gint),1,mlfd);
-	retval = fwrite(&depth, sizeof(gint),1,mlfd);
+	fwrite(&width, sizeof(gint), 1, mlfd);
+	fwrite(&height, sizeof(gint), 1, mlfd);
+	retval = fwrite(&depth, sizeof(gint) ,1, mlfd);
 	if(retval != 1)
 	{
 		fprintf(stderr, "Write error %d!= 1\n",retval);
 		goto processingFault;
 	}
-	fprintf(stdout, "starting Er\n");		
+	fprintf(stdout, "starting Er\n");
+	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
 	for(i=0; i<width; i++)
 	{
 		for(j=0; j<height; j++)

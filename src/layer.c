@@ -295,3 +295,48 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	fprintf(stdout, "processing Outline completed\n");
 
 }
+
+
+void LAYER_ProcessLayer(fRect* dest, indexSize_t matrlIndex)
+{
+	int borderIndex = 1; 	// fixme, need better way 
+	int backgroundIndex = 5; 	// fixme, need better way
+	int x;
+	int y;
+	fprintf(stdout, "\n%s with border:%d and background: %d\n", __FUNCTION__, borderIndex, backgroundIndex);
+	fprintf(stdout, "%s with x:%d y:%d mat index:%d\n", __FUNCTION__, dest->xres, dest->yres, matrlIndex);
+	
+	if(dest->xres != img.width)
+	{
+		fprintf(stderr, "ERROR, xres != width %d != %d\n", dest->xres, img.width);
+		return;
+	}	
+	if(dest->yres != img.height)
+	{
+		fprintf(stderr, "ERROR, yres != height %d != %d\n", dest->yres, img.height);
+		return;
+	}
+
+	fprintf(stdout, "\tscaning image of layer\n");
+	int dest_x = 0;
+	for(x=0, dest_x=0; x< img.width/2; x++)
+	{
+		for(y=0;y<img.height;y++)
+		{ 
+			uint8_t pngDatum = img.row_pointers[y][x];
+			if( ((pngDatum >>4) != backgroundIndex) )
+			{
+				dest->data[dest_x][y] = matrlIndex;
+			}
+			if(dest_x < dest->xres)
+			{
+				if( ((pngDatum & 0x0f) != backgroundIndex) )
+				{
+					dest->data[dest_x+1][y] = matrlIndex;
+				}
+			}
+		}
+		dest_x += 2;
+	}
+	fprintf(stdout, "%s completed\n", __FUNCTION__);
+}

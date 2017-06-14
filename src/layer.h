@@ -5,6 +5,7 @@
 int LAYER_ReadPng(char* file_name);
 void LAYER_ProcessOutline(fRect* dest, indexSize_t index );
 void LAYER_Done();
+void LAYER_ProcessLayer(fRect* dest, indexSize_t matrlIndex);
 
 
 
