@@ -1,4 +1,4 @@
-/* Made with PCB Nelma export HID *//* Thu May 18 08:54:33 2017
+/* Made with PCB Nelma export HID *//* Tue Jun 13 09:56:27 2017
  */
 /* **** Nets **** */
 
@@ -27,72 +27,72 @@ object R1-2-bottom {
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.bottom.png"
-	file-pos = { 132, 55 }
+	file = "test1.nelma.bottom.png"
+	file-pos = { 662, 277 }
 }
 object R1-2-top {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.top.png"
-	file-pos = { 132, 55 }
+	file = "test1.nelma.top.png"
+	file-pos = { 662, 277 }
 }
 object R1-2-outline {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.outline.png"
-	file-pos = { 132, 55 }
+	file = "test1.nelma.outline.png"
+	file-pos = { 662, 277 }
 }
 object R1-1-bottom {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.bottom.png"
-	file-pos = { 132, 41 }
+	file = "test1.nelma.bottom.png"
+	file-pos = { 662, 208 }
 }
 object R1-1-top {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.top.png"
-	file-pos = { 132, 41 }
+	file = "test1.nelma.top.png"
+	file-pos = { 662, 208 }
 }
 object R1-1-outline {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.outline.png"
-	file-pos = { 132, 41 }
+	file = "test1.nelma.outline.png"
+	file-pos = { 662, 208 }
 }
 object START-1-bottom {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.bottom.png"
-	file-pos = { 34, 42 }
+	file = "test1.nelma.bottom.png"
+	file-pos = { 172, 213 }
 }
 object START-1-top {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.top.png"
-	file-pos = { 34, 42 }
+	file = "test1.nelma.top.png"
+	file-pos = { 172, 213 }
 }
 object START-1-outline {
 	position = { 0, 0 }
 	material = "copper"
 	type = "image"
 	role = "net"
-	file = "/home/crowe/mc/pcb2gsvit/test1/test1.nelma.outline.png"
-	file-pos = { 34, 42 }
+	file = "test1.nelma.outline.png"
+	file-pos = { 172, 213 }
 }
 
 /* **** Layers **** */
@@ -172,7 +172,7 @@ material composite {
 /* **** Space **** */
 
 space pcb {
-	step = { 1.270000e-04, 1.270000e-04, 3.500000e-05 }
+	step = { 2.540000e-05, 2.540000e-05, 3.500000e-05 }
 	layers = {
 		"air-top",
 		"air-bottom",
