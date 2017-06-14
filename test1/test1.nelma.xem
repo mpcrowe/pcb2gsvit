@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nelma>
 	<comment>Made with PCB Nelma export HID</comment>
-	<genTime>Tue Jun 13 09:56:27 2017</genTime>
+	<genTime>Wed Jun 14 14:51:40 2017</genTime>
 	<space>
 		<comment> **** Space **** </comment>
 		<resolution units="mm">0.025400</resolution>
@@ -42,7 +42,7 @@
 		<comment>***** Drills ****</comment>
 		<drill id="D0">
 			<dia_inches>0.012</dia_inches>
-			<radius>12</radius>
+			<radius>6</radius>
 			<pos type="plated">662,148</pos>
 			</drill></drills>
 </nelma>
