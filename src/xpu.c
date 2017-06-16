@@ -178,6 +178,35 @@ xmlChar* XPU_LookupFromNode(xmlNodePtr node, char* xpathString)
 	return(NULL);
 }
 
+xmlNodeSetPtr XPU_GetNodeSetFromNode(xmlNodePtr node, char* xpathString)
+{
+	xmlXPathContextPtr xpathCtx = xmlXPathNewContext( node->doc);
+	xmlXPathObjectPtr xpathObj;
+
+	if(xpathCtx == NULL)
+	{
+		fprintf(stderr,"%s Error: unable to create new XPath context\n", __FUNCTION__);
+		return(NULL);
+	}
+	xpathCtx->node = node;
+	xpathObj = xmlXPathEvalExpression((const xmlChar*)xpathString, xpathCtx);
+	xmlXPathFreeContext(xpathCtx);
+	if(xpathObj == NULL)
+	{
+		fprintf(stderr,"%s Error: unable to evaluate xpath expression \"%s\"\n", __FUNCTION__, xpathString);
+		return(NULL);
+	}
+	if(xmlXPathNodeSetIsEmpty(xpathObj->nodesetval))
+	{
+		xmlXPathFreeObject(xpathObj);
+		fprintf(stderr,"%s No result\n", __FUNCTION__);
+		return(NULL);
+	}
+
+	xmlNodeSetPtr nodes = xpathObj->nodesetval;
+	return(nodes);
+}
+
 
 xmlNodeSetPtr XPU_GetNodeSet(xmlDocPtr doc, char* xpathString)
 {

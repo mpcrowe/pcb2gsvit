@@ -20,6 +20,7 @@
 #include "frect.h"
 #include "xpu.h"
 #include "layer.h"
+#include "med_vect.h"
 
 /*----------------------------------------------------------------------------
 *        Internal definitions
@@ -33,6 +34,7 @@
 #define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
 #define XPATH_XEM_OUTLINE "/boardInformation/boardStackup/layer[name/text()='outline']/material/text()"
 
+#define XPATH_NELMA_DRILLS "/nelma/drills/drill"
 #define XPATH_NELMA_WIDTH "/nelma/space/width/text()"
 #define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
 #define XPATH_NELMA_RES	"/nelma/space/resolution/text()"
@@ -354,6 +356,8 @@ int execute_conversion(const char* filename)
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
 		goto processingFault;
+
+#ifdef OUTPUT_MED_LIN
 	fprintf(stdout,"medium linear filename: %s\n", mlFname);
 	FILE* mlfd = fopen(mlFname, "w");
 	if(mlfd == NULL)
@@ -416,10 +420,13 @@ int execute_conversion(const char* filename)
 			
 		}
 	}
-
-
-
 	fclose(mlfd);
+#endif	
+	xmlNodeSetPtr xnsDrills  = XPU_GetNodeSet(nelmaDoc, XPATH_NELMA_DRILLS);
+	
+	 
+	retval = MV_ProcessDrillNodeSet(stdout, xnsDrills, 15, 60, 2);
+	
 	fprintf(stderr, "processing complete, no errors encountered\n");
 	xmlFreeDoc(nelmaDoc);
 	xmlFreeDoc(boardDoc);

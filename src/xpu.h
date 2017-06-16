@@ -20,6 +20,7 @@ xmlChar* XPU_SimpleLookup(xmlDocPtr doc, char* xpathString);
 xmlChar* XPU_LookupFromNode(xmlNodePtr node, char* xpathString);
 
 xmlNodeSetPtr XPU_GetNodeSet(xmlDocPtr doc, char* xpathString);
+xmlNodeSetPtr XPU_GetNodeSetFromNode(xmlNodePtr node, char* xpathString);
 
 double XPU_GetDouble(xmlDocPtr doc, char* xpath);
 

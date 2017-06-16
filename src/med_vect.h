@@ -12,7 +12,7 @@
 // allocates memory for a new frect instance
 FILE* MV_Open(char* name);
 void MV_Close(FILE* mvfd);
-int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int zstart, int zstop);
+int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int zstart, int zstop, int plateThickness);
 
 
 #endif

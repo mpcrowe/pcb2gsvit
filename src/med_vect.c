@@ -37,11 +37,14 @@ void MV_Close(FILE* mvfd)
 	if(mvfd)
 		fclose(mvfd);
 }
+#define COPPER_CYL_INFO "<fill this in for copper>"
+#define AIR_CYL_INFO "<fill this in for air>"
 
-int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int zstart, int zstop)
+int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int z1, int z2, int plateThickness)
 {
 	int i;
-	if((mvfd == NULL) || (xnsPtr == NULL) || (zstart==zstop))
+	int isPlated = 1;
+	if((mvfd == NULL) || (xnsPtr == NULL) || (z1==z2))
 	{
 		fprintf(stderr, "%s General Input fault\n", __FUNCTION__);
 		return(-1);
@@ -63,12 +66,13 @@ int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int zstart, int zst
 </drill>
 */		        											// get the drill name
 		xmlChar* drillRadius = XPU_LookupFromNode(currDrill, "./radius/text()");
-		fprintf(stdout, "%d radius:<%s>  \t", i, drillRadius);
-		//
-		xmlNodeSetPtr xnsPos = XPU_GetNodeSet((xmlDocPtr)currDrill, "./pos/");
+		fprintf(stdout, "%s:%d radius:<%s>  \n", __FUNCTION__, i, drillRadius);
+		int radius = strtol((char*)drillRadius,NULL,10);
+
+		xmlNodeSetPtr xnsPos = XPU_GetNodeSetFromNode(currDrill, "./pos");
 		if(xnsPos == NULL)
 		{
-			fprintf(stdout, "%d radius:<%s>  \t", i, drillRadius);
+			fprintf(stdout, "%s: NULL pos set\n", __FUNCTION__);
 			return(-3);
 		}
 		 
@@ -81,9 +85,37 @@ int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int zstart, int zst
 				return(-2);
 			}
 			xmlChar* xpos = XPU_LookupFromNode(currPos, "./text()");
-			fprintf(stdout, "%s",(char*)xpos);
+//			fprintf(stdout, "%s ",(char*)xpos);
 			xmlChar* xtype = XPU_LookupFromNode(currPos, "@type");
-			fprintf(stdout, "%s",(char*)xtype);
+//			fprintf(stdout, "%s \n",(char*)xtype);
+
+			char* cval = strtok((char*)xpos, ",");
+			int xp = strtol((char*)cval,NULL,10);
+			cval = strtok(NULL, ",");
+			int yp = strtol((char*)cval,NULL,10);
+			
+			if(strstr((char*)xtype,"unplated")!=NULL)
+			{
+				isPlated = 0;
+			}
+			else if(strstr((char*)xtype,"plated")!=NULL)
+			{
+				isPlated = 1;
+			}
+			
+			fprintf(stdout,"%s x:%d, y:%d, z1:%d, z2:%d, r:%d, t:%d, %s\n", __FUNCTION__, xp,yp,z1,z2,radius,plateThickness, (char*)xtype);
+			
+			if(isPlated == 1)
+			{ // a plated hole consists of two cylinders, one  copper the other is air
+				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, COPPER_CYL_INFO);
+				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, AIR_CYL_INFO);
+			}
+			else
+			{ // an unplaed hole consists of a cylinder of air
+				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, AIR_CYL_INFO);
+			}
+			
+			        			
 		}
 	}
 	return(0);
