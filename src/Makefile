@@ -8,8 +8,8 @@
 PROJECT = pcb2gsvit
 #DEBUG = --debug
 CC = gcc
-OBJECTS = layer.o xpu.o frect.o material.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
-SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c
+OBJECTS = layer.o xpu.o frect.o material.o med_vect.o #gcdcInterface.o ihex.o version.o firmwareUpdater.o
+SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c med_vect.c
 AUX = Makefile
 PREMADES = 
 #GWY_CFLAGS=-I/usr/include/gwyddion -I/usr/lib//gwyddion/include
