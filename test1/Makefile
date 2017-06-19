@@ -17,7 +17,7 @@ SCH_SRCS =  $(PROJECT).sch
 AUX = Makefile attribs rules.txt
 
 BIN_PATH=/usr/bin
-LOCAL_BIN_PATH=/usr/local/bin
+LOCAL_BIN_PATH=~/temp/pcb/pcb/src
 TRAGESYM = $(BIN_PATH)/tragesym
 PCB = $(LOCAL_BIN_PATH)/pcb
 GSCHEM = $(BIN_PATH)/gschem
@@ -150,7 +150,7 @@ workTemp/$(PROJECT).xy: $(PROJECT).pcb workTemp
 	$(PCB)  -x bom --bomfile /dev/null --xyfile $@ $<
 
 %.nelma.em: $(PROJECT).pcb
-	/home/crowe/temp/pcb/pcb/src/pcb -x nelma $(PROJECT).pcb
+	/home/crowe/temp/pcb/pcb/src/pcb -x nelma --dpi 200 $(PROJECT).pcb
 	rm *.save
 
 

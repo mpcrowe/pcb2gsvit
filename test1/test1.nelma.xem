@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nelma>
 	<comment>Made with PCB Nelma export HID</comment>
-	<genTime>Wed Jun 14 14:51:40 2017</genTime>
+	<genTime>Mon Jun 19 17:08:20 2017</genTime>
 	<space>
 		<comment> **** Space **** </comment>
-		<resolution units="mm">0.025400</resolution>
-		<width>866</width>
-		<height>472</height>
+		<resolution units="mm">0.127000</resolution>
+		<width>173</width>
+		<height>94</height>
 		<layers>
 			<layer name="bottom">test1.nelma.bottom.png</layer>
 			<layer name="top">test1.nelma.top.png</layer>
@@ -25,14 +25,14 @@
 		<xy name="START">
 			<description>test_point_smt_50</description>
 			<value>unknown</value>
-			<pos>172,258</pos>
+			<pos>34,51</pos>
 			<rotation>0</rotation>
 			<side>top</side>
 		</xy>
 	<xy name="R1">
 			<description>0603__ROHM</description>
 			<value>10k</value>
-			<pos>662,228</pos>
+			<pos>132,45</pos>
 			<rotation>270</rotation>
 			<side>top</side>
 		</xy>
@@ -42,7 +42,7 @@
 		<comment>***** Drills ****</comment>
 		<drill id="D0">
 			<dia_inches>0.012</dia_inches>
-			<radius>6</radius>
-			<pos type="plated">662,148</pos>
+			<radius>1</radius>
+			<pos type="plated">132,29</pos>
 			</drill></drills>
 </nelma>
