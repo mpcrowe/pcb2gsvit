@@ -14,6 +14,12 @@
 #include "med_vect.h"
 #include "xpu.h"
 
+// here we use SV_MAT_LINEAR see gsvit/src3d/settings.h line 102 and plan.c line 245
+// 		typ epslsonR, conductivity, muR, magnetic conductivity
+#define COPPER_CYL_INFO "0 1.0 5.96e7 1.0 0.0"
+#define AIR_CYL_INFO    "0 1.0 0.0 1.0 0.0"
+
+
 // allocates memory for a new frect instance
 FILE* MV_Open(char* name)
 {
@@ -37,8 +43,6 @@ void MV_Close(FILE* mvfd)
 	if(mvfd)
 		fclose(mvfd);
 }
-#define COPPER_CYL_INFO "<fill this in for copper>"
-#define AIR_CYL_INFO "<fill this in for air>"
 
 int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int z1, int z2, int plateThickness)
 {
@@ -107,6 +111,8 @@ int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int z1, int z2, int
 			
 			if(isPlated == 1)
 			{ // a plated hole consists of two cylinders, one  copper the other is air
+					// 7 the geometery type (cyl)
+					//      x1 y1 z1 x2 y2 z2 rad 
 				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, COPPER_CYL_INFO);
 				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, AIR_CYL_INFO);
 			}
