@@ -1,5 +1,5 @@
 POOL
-173 94 36 1e-06 1e-06 1e-06
+173 94 44 1e-06 1e-06 1e-06
 
 COMP
 400
@@ -28,9 +28,15 @@ MATMODE_CHECK
 MEDIUM_LINEAR
 medLin.bin
 
+MEDIUM_VECTOR
+matvect.txt
+
 OUT_FILE
 out.gwy
 
 OUT_IMAGE
 Ez 1 -1 47 -1 ez_yz
+
+OUT_IMAGE
+Ez 10 132 -1 -1 ez_at_via
 
