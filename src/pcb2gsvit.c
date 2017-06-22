@@ -356,7 +356,7 @@ int execute_conversion(const char* filename)
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
 	if(mlFname == NULL)
 		goto processingFault;
-
+#define OUTPUT_MED_LIN 1
 #ifdef OUTPUT_MED_LIN
 	fprintf(stdout,"medium linear filename: %s\n", mlFname);
 	FILE* mlfd = fopen(mlFname, "w");
