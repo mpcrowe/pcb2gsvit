@@ -214,7 +214,7 @@ int execute_conversion(const char* filename)
 	fRect* boardOutlineLayer = NULL;
 	char layerFname[0x400];
 	getLayerFilename(nelmaFilename, layerFname, "outline");
-	fprintf(stdout, "outline fname: %s\n",layerFname);
+//	fprintf(stdout, "outline fname: %s\n",layerFname);
 	if(LAYER_ReadPng(layerFname))
 	{
 		fprintf(stdout, "warning, no outline layer found, using default fill(air) for board values\n");
@@ -232,9 +232,12 @@ int execute_conversion(const char* filename)
 	if(xnsLayers == NULL)
 		goto processingFault;
 	
-	fprintf(stdout, "layer processing\n");	
+//	fprintf(stdout, "layer processing\n");	
 	// for each layer, create a unique layer unless it already exists (fill and outline layers)
 	GList* gLayers = NULL;
+	int zVoxelTotal = 0;
+	int zVoxelBottom  = 0;
+	int zVoxelTop = 0;
 	for(i = 0; i<xnsLayers->nodeNr; i++)
 	{
 		fRect* fRectCurrent;
@@ -313,34 +316,21 @@ int execute_conversion(const char* filename)
 			{
 				LAYER_ProcessLayer(fRectCurrent, mIndex);
 			}	
-
-			
-// process a copper layer here			
-			
 		}
 		for(k=0; k< zVoxelCount; k++)
 			gLayers = g_list_prepend(gLayers, fRectCurrent);
-			
-		
-//		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/relativePermittivity/text()", materialName);
-//		xmlChar* cEr = XPU_SimpleLookup(boardDoc, xpathString);
-//		if(cEr == NULL)
-//		{
-//			goto processingFault;
-//		}
-//		fprintf(stdout, "Er: %s\t",  cEr);
-//
-//		sprintf(xpathString, "/boardInformation/materials/material[@id='%s']/conductivity/text()", materialName);
-//		xmlChar* cCond = XPU_SimpleLookup(boardDoc, xpathString);
-//		if(cCond == NULL)
-//		{
-//			goto processingFault;
-//		}
-//
-//		fprintf(stdout, "Conductivity: %s\n",  cCond);
+printf("bottom\n");
 
+		if(strstr("bottom",  (char*)layerName) != NULL)
+		{
+			zVoxelBottom = zVoxelTotal;
+		}
+		zVoxelTotal += zVoxelCount;
+		if(strstr("top",  (char*)layerName) != NULL)
+		{
+			zVoxelTop = zVoxelTotal;
+		}
 		fprintf(stdout, "\n");
-//		createLayer(width, height, )
 	}
 
 	gLayers = g_list_reverse(gLayers);
@@ -424,8 +414,8 @@ int execute_conversion(const char* filename)
 #endif	
 	xmlNodeSetPtr xnsDrills  = XPU_GetNodeSet(nelmaDoc, XPATH_NELMA_DRILLS);
 	
-	 
-	retval = MV_ProcessDrillNodeSet(stdout, xnsDrills, 15, 60, 2);
+
+	retval = MV_ProcessDrillNodeSet(stdout, xnsDrills, zVoxelBottom, zVoxelTop, 2);
 	
 	fprintf(stderr, "processing complete, no errors encountered\n");
 	xmlFreeDoc(nelmaDoc);
