@@ -17,7 +17,7 @@ UGPU
 0
 
 SOURCE_POINT
-20 47 14 1 0.001 10 0 1.5708
+34 43 20 1 0.001 10 0 1.5708
 
 BOUNDARY_ALL
 none
@@ -35,8 +35,17 @@ OUT_FILE
 out.gwy
 
 OUT_IMAGE
-Ez 1 -1 47 -1 ez_yz
+Ex 10 -1 43 -1 ex_yz_under_trace
 
 OUT_IMAGE
-Ez 10 132 -1 -1 ez_at_via
+Ey 10 -1 43 -1 ey_yz_under_trace
+
+OUT_IMAGE
+Ez 10 -1 43 -1 ez_yz_under_trace
+
+#OUT_IMAGE
+#Ez 10 132 -1 -1 ez_at_via
+
+OUT_IMAGE
+Ez 10 -1 -1 19 top
 
