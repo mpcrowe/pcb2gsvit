@@ -114,7 +114,7 @@ int LAYER_ReadPng(char* file_name)
 	compression_type = png_get_compression_type(png_ptr, info_ptr);
 	filter_method = png_get_filter_type(png_ptr, info_ptr);
 
-	fprintf(stdout, "w: %d  h: %d bit_depth %d\n", img.width, img.height, img.bit_depth);
+//	fprintf(stdout, "w: %d  h: %d bit_depth %d\n", img.width, img.height, img.bit_depth);
 #ifndef USE_LOCAL_MALLOC
 	img.row_pointers = png_get_rows(png_ptr, info_ptr);
 #endif
@@ -171,8 +171,8 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	int backgroundIndex = 5; 	// fixme, need better way
 	int x;
 	int y;
-	fprintf(stdout, "\nProcessing Outline with border:%d and background: %d\n", borderIndex, backgroundIndex);
-	fprintf(stdout, "processing Outline with x:%d y:%d mat index:%d\n", dest->xres, dest->yres, matrlIndex);
+//	fprintf(stdout, "\nProcessing Outline with border:%d and background: %d\n", borderIndex, backgroundIndex);
+//	fprintf(stdout, "processing Outline with x:%d y:%d mat index:%d\n", dest->xres, dest->yres, matrlIndex);
 	
 	if(dest->xres != img.width)
 	{
@@ -187,7 +187,7 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	FRECT_Fill(dest, matrlIndex);
 
 	// top down search for border
-	fprintf(stdout, "\ttop down search\n");
+//	fprintf(stdout, "\ttop down search\n");
 	int dest_x = 0;
 	for(x=0, dest_x=0; x< img.width/2; x++)
 	{
@@ -208,7 +208,7 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	}
 
 	// bottom up search for boarder
-	fprintf(stdout, "\tbottom up search\n");
+//	fprintf(stdout, "\tbottom up search\n");
 	dest_x = 0;
 	for(x=0, dest_x=0; x< img.width/2; x++)
 	{
@@ -241,7 +241,7 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	}
 
 	// left to right search for boarder
-	fprintf(stdout, "\tleft to right search\n");
+//	fprintf(stdout, "\tleft to right search\n");
 	dest_x = 0;
 	for(y=0;y<img.height; y++)
 	{
@@ -267,7 +267,7 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 	}
 
 	// right to left search for boarder
-	fprintf(stdout, "\tright to left search\n");
+//	fprintf(stdout, "\tright to left search\n");
 	dest_x = 0;
 	for(y=0;y<img.height; y++)
 	{
@@ -292,7 +292,7 @@ void LAYER_ProcessOutline(fRect* dest, indexSize_t matrlIndex)
 		}
 	}
 	
-	fprintf(stdout, "processing Outline completed\n");
+//	fprintf(stdout, "processing Outline completed\n");
 
 }
 
@@ -303,8 +303,8 @@ void LAYER_ProcessLayer(fRect* dest, indexSize_t matrlIndex)
 	int backgroundIndex = 5; 	// fixme, need better way
 	int x;
 	int y;
-	fprintf(stdout, "\n%s with border:%d and background: %d\n", __FUNCTION__, borderIndex, backgroundIndex);
-	fprintf(stdout, "%s with x:%d y:%d mat index:%d\n", __FUNCTION__, dest->xres, dest->yres, matrlIndex);
+//	fprintf(stdout, "\n%s with border:%d and background: %d\n", __FUNCTION__, borderIndex, backgroundIndex);
+//	fprintf(stdout, "%s with x:%d y:%d mat index:%d\n", __FUNCTION__, dest->xres, dest->yres, matrlIndex);
 	
 	if(dest->xres != img.width)
 	{
@@ -317,7 +317,7 @@ void LAYER_ProcessLayer(fRect* dest, indexSize_t matrlIndex)
 		return;
 	}
 
-	fprintf(stdout, "\tscaning image of layer\n");
+//	fprintf(stdout, "\tscaning image of layer\n");
 	int dest_x = 0;
 	for(x=0, dest_x=0; x< img.width/2; x++)
 	{
@@ -338,5 +338,5 @@ void LAYER_ProcessLayer(fRect* dest, indexSize_t matrlIndex)
 		}
 		dest_x += 2;
 	}
-	fprintf(stdout, "%s completed\n", __FUNCTION__);
+//	fprintf(stdout, "%s completed\n", __FUNCTION__);
 }
