@@ -114,7 +114,8 @@ int MV_ProcessDrillNodeSet(FILE* mvfd, xmlNodeSetPtr xnsPtr, int z1, int z2, int
 					// 7 the geometery type (cyl)
 					//      x1 y1 z1 x2 y2 z2 rad 
 				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, COPPER_CYL_INFO);
-				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, AIR_CYL_INFO);
+				if((radius-plateThickness) > 0)
+					fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, AIR_CYL_INFO);
 			}
 			else
 			{ // an unplaed hole consists of a cylinder of air
