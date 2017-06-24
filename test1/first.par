@@ -17,10 +17,10 @@ UGPU
 0
 
 SOURCE_POINT
-34 43 21 1 4e-05 10 0 1.5708
+34 43 19 1 4e-05 10 0 1.5708
 
 BOUNDARY_ALL
-none
+liao
 
 MATMODE_CHECK
 1
@@ -32,7 +32,8 @@ MEDIUM_VECTOR
 matvect.txt
 
 OUT_FILE
-out1.gwy
+out.gwy
+
 
 OUT_IMAGE
 Ez 1 -1 43 -1 ez_yz_under_trace
