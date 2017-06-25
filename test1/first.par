@@ -34,7 +34,6 @@ matvect.txt
 OUT_FILE
 out.gwy
 
-
 OUT_IMAGE
 Ez 1 -1 43 -1 ez_yz_under_trace
 
@@ -43,4 +42,7 @@ Ez 1 132 -1 -1 ez_at_via
 
 OUT_IMAGE
 Ez 1 -1 -1 19 top
+
+OUT_VOLUME
+Ez 10 80 380 0 /home/crowe/mc/pcb2gsvit/test1/voutput1
 
