@@ -16,8 +16,8 @@
 
 // here we use SV_MAT_LINEAR see gsvit/src3d/settings.h line 102 and plan.c line 245
 // 		typ epslsonR, conductivity, muR, magnetic conductivity
-#define COPPER_CYL_INFO "0 1.0 5.96e7 1.0 0.0"
-#define AIR_CYL_INFO    "0 1.0 0.0 1.0 0.0"
+#define COPPER_CYL_INFO "0 1.0 1.0 5.96e7 0.0"
+#define AIR_CYL_INFO    "0 1.0 1.0 0.0 0.0"
 
 
 // allocates memory for a new frect instance
