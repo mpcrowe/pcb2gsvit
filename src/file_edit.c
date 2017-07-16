@@ -86,7 +86,6 @@ int _copy(char* dest, char* source)
 /*----------------------------------------------------------------------------
 *        Exported functions
 *----------------------------------------------------------------------------*/
-
 int FE_AppendRule(char* key, char* replacementText, void (*callback)(editRule*) )
 {
 	editRule* pRule = (editRule*)malloc(sizeof( editRule));
@@ -140,15 +139,42 @@ int FE_EditFile(char* filename)
 		fprintf(stderr,"%s ERROR copy %d", __FUNCTION__, retval);
 		return(-1);
 	}
-	
-	// parse the temp file looking for keywords
-	// if callback is NULL, use default callback
-	GList* l;
+	FILE *fpOrig = fopen(tempFname, "r");
+	if( fpOrig == NULL )
+	{
+		fprintf(stderr,"%s ERROR open %s", __FUNCTION__, tempFname);
+		return(-1);
+	}
 
-	for (l = gRules; l != NULL; l = l->next)
-	{	// do something with l->data
-		editRule* pRule=  ((editRule*)(l->data));
-	}	
+	FILE *fpEdited = fopen(filename, "w");
+	if( fpEdited == NULL )
+	{
+		fprintf(stderr,"%s ERROR open %s", __FUNCTION__, filename);
+		return(-1);
+	}
+	gchar key[0x100];
+	// parse the temp file looking for keywords
+	while (fscanf(fpOrig, "%s", key) != EOF)
+	{
+		printf("key: %s\n", key);
+		
+// if callback is NULL, use default callback
+		GList* l;
+		gchar* pRText = key;
+		for (l = gRules; l != NULL; l = l->next)
+		{	// do something with l->data
+			editRule* pRule=  ((editRule*)(l->data));
+			if(strcmp(key, pRule->key) == 0)
+			{
+				fputs(key, fpEdited);
+				pRText = pRule->pRText;
+				break;
+			}
+		}
+		fputs(pRText, fpEdited);
+	}
+	fclose(fpEdited);
+	fclose(fpOrig);
 
 	return(0);
 }

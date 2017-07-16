@@ -21,6 +21,7 @@
 #include "xpu.h"
 #include "layer.h"
 #include "med_vect.h"
+#include "file_edit.h"
 
 /*----------------------------------------------------------------------------
 *        Internal definitions
@@ -61,6 +62,15 @@ static void usage(const char *name);
 /*----------------------------------------------------------------------------
 *        Local functions
 *----------------------------------------------------------------------------*/
+
+void generateParFileEditRules(void)
+{
+	FE_AppendRule("POOL", "llelkd", NULL);
+	FE_AppendRule("MEDIUM_LINEAR", "medLin.bin", NULL);
+	FE_AppendRule("MEDIUM_VECTOR", "matvect.txt", NULL);
+}
+
+
 
 char* getFilenamePath( const char* parentDocName)
 {
