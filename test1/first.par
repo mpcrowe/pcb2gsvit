@@ -44,5 +44,5 @@ OUT_IMAGE
 Ez 1 -1 -1 19 top
 
 OUT_VOLUME
-All 10 80 380 0 /home/crowe/mc/pcb2gsvit/test1/voutput1
+All 10 80 380 0 /home/crowe/mc/pcb2gsvit/test1/vout/voutput1
 

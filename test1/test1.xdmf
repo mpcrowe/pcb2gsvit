@@ -26,6 +26,12 @@
         </DataItem>
       </Attribute>
 
+     <Attribute Name="Vout 80" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="173 94 44" NumberType="Float" Precision="8" Format="Binary" Endian="Little" Seek="0">
+         ./vout/voutput1_0380.raw
+        </DataItem>
+      </Attribute>
+
       
 <!--      <Attribute Name="ez_r" AttributeType="Scalar" Center="Node">
         <DataItem Dimensions="21 41 21 " NumberType="Float" Precision="8" Format="HDF">
