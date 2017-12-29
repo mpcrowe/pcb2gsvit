@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<nelma>
-	<comment>Made with PCB Nelma export HID</comment>
-	<genTime>Sat Jul  1 18:45:19 2017</genTime>
+<gsvit>
+	<comment>Made with PCB gsvit export HID</comment>
+	<genTime>Fri Dec 29 15:45:03 2017</genTime>
 	<space>
 		<comment> **** Space **** </comment>
 		<resolution units="mm">0.127000</resolution>
 		<width>173</width>
 		<height>94</height>
 		<layers>
-			<layer name="bottom">test1.nelma.bottom.png</layer>
-			<layer name="top">test1.nelma.top.png</layer>
-			<layer name="outline">test1.nelma.outline.png</layer>
+			<layer name="bottom">test1.gsvit.bottom.png</layer>
+			<layer name="top">test1.gsvit.top.png</layer>
+			<layer name="outline">test1.gsvit.outline.png</layer>
 			
 		</layers>
 	</space>
@@ -45,4 +45,4 @@
 			<radius>1</radius>
 			<pos type="plated">132,64</pos>
 			</drill></drills>
-</nelma>
+</gsvit>

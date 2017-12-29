@@ -17,7 +17,8 @@ SCH_SRCS =  $(PROJECT).sch
 AUX = Makefile attribs rules.txt
 
 BIN_PATH=/usr/bin
-LOCAL_BIN_PATH=/home/crowe/temp/pcb/git-pcb/bert/pcb/src
+#LOCAL_BIN_PATH=/home/crowe/temp/pcb/git-pcb/bert/pcb/src
+LOCAL_BIN_PATH=/home/crowe/temp/pcb/git-pcb/working/pcb/src
 PCB = $(LOCAL_BIN_PATH)/pcb
 GSCHEM = $(BIN_PATH)/gschem
 DATE =  $(shell date +%Y%m%d)
@@ -60,6 +61,10 @@ sch:
 	
 test: gsvit
 	../src/pcb2gsvit boardInfo.xml
+	
+gsvit_test: test
+	mkdir -p vout
+	/home/crowe/temp/svn-gsvit/gsvit/src3d/gsvit first.par
 
 
 dist: $(SRCS) $(AUX)
