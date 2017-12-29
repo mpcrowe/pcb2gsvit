@@ -29,17 +29,17 @@
 #define MAX_FILENAME 0x200
 #define SVN_REV "found on github at https://github.com/mpcrowe/pcb2gsvit.git"
 
-#define XPATH_XEM_NAME "/boardInformation/nelmaExport/text()"
+#define XPATH_XEM_NAME "/boardInformation/gsvitExport/text()"
 #define XPATH_XEM_OUTPUT_FILENAME "/boardInformation/gsvit/mediumLinearFilename/text()"
 #define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
 #define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
 #define XPATH_XEM_OUTLINE "/boardInformation/boardStackup/layer[name/text()='outline']/material/text()"
 
-#define XPATH_NELMA_DRILLS "/nelma/drills/drill"
-#define XPATH_NELMA_WIDTH "/nelma/space/width/text()"
-#define XPATH_NELMA_HEIGHT "/nelma/space/height/text()"
-#define XPATH_NELMA_RES	"/nelma/space/resolution/text()"
-#define XPATH_NELMA_RES_UNITS	"/nelma/space/resolution/@units"
+#define XPATH_NELMA_DRILLS "/gsvit/drills/drill"
+#define XPATH_NELMA_WIDTH "/gsvit/space/width/text()"
+#define XPATH_NELMA_HEIGHT "/gsvit/space/height/text()"
+#define XPATH_NELMA_RES	"/gsvit/space/resolution/text()"
+#define XPATH_NELMA_RES_UNITS	"/gsvit/space/resolution/@units"
 
 
 /*----------------------------------------------------------------------------
@@ -49,10 +49,9 @@
 /*----------------------------------------------------------------------------
 *        Local functions
 *----------------------------------------------------------------------------*/
-char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
+char* getXemFilename(xmlDocPtr doc, const char* parentDocName);
 char* getFilenamePath( const char* parentDocName);
 char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath);
-char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName);
 char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName);
  	 	   	 	  
 int execute_conversion(const char* filename);
@@ -115,17 +114,17 @@ char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const ch
 	return(dest);
 }
 
-char* getLayerFilename(const char* nelmaName, char* dest, char* basename);
-char* getLayerFilename(const char* nelmaName, char* dest, char* basename)
+char* getLayerFilename(const char* xmlName, char* dest, char* basename);
+char* getLayerFilename(const char* xmlName, char* dest, char* basename)
 {
-	strcpy(dest,nelmaName);
+	strcpy(dest,xmlName);
 	char* end = strcasestr(dest, ".xem");
 	sprintf(end, ".%s.png", basename );
 	return(dest);
 }
 
 
-char* getNelmaFilename(xmlDocPtr doc, const char* parentDocName)
+char* getXemFilename(xmlDocPtr doc, const char* parentDocName)
 {
 	static char fullName[0x400];
 	return(getFilename(doc, parentDocName, fullName, XPATH_XEM_NAME) );
@@ -142,8 +141,8 @@ char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName)
 int execute_conversion(const char* filename)
 {
 	xmlDocPtr boardDoc;
-	xmlDocPtr nelmaDoc;
-	char* nelmaFilename;
+	xmlDocPtr xemDoc;
+	char* xemFilename;
 	int i;
 	int j;
 	int k;
@@ -156,31 +155,31 @@ int execute_conversion(const char* filename)
 		return(-1);
 	}
 
-	// get nelma filename
-	nelmaFilename = getNelmaFilename(boardDoc, filename);
-	if(nelmaFilename == NULL)
+	// get xem filename
+	xemFilename = getXemFilename(boardDoc, filename);
+	if(xemFilename == NULL)
 	{
 		goto processingFault;
 	}
-	fprintf(stdout, "%s\n",nelmaFilename);
+	fprintf(stdout, "%s\n",xemFilename);
 
-	// parse nelma file
-	nelmaDoc = xmlParseFile(nelmaFilename);
-	if(nelmaDoc == NULL)
+	// parse xem file
+	xemDoc = xmlParseFile(xemFilename);
+	if(xemDoc == NULL)
 	{
-		fprintf(stderr, "Error: unable to parse file \"%s\"\n", nelmaFilename);
+		fprintf(stderr, "Error: unable to parse file \"%s\"\n", xemFilename);
 		return(-1);
 	}
 
 	// get width, in voxels (pixels)
-	xmlChar* cWidth = XPU_SimpleLookup(nelmaDoc,XPATH_NELMA_WIDTH);
+	xmlChar* cWidth = XPU_SimpleLookup(xemDoc,XPATH_NELMA_WIDTH);
 	if(cWidth == NULL)
 		goto processingFault;
 	gint width = strtol((char*)cWidth,NULL,10);
 	xmlFree(cWidth);
 
 	// get height, in voxels (pixels)
-	xmlChar* cHeight = XPU_SimpleLookup(nelmaDoc,XPATH_NELMA_HEIGHT);
+	xmlChar* cHeight = XPU_SimpleLookup(xemDoc,XPATH_NELMA_HEIGHT);
 	if(cHeight == NULL)
 		goto processingFault;
 	gint height = strtol((char*)cHeight,NULL,10);
@@ -189,10 +188,10 @@ int execute_conversion(const char* filename)
 	fprintf(stdout,"w:%d: h:%d:\n",width, height);
 
 	// get the pixel resolution, in meters per pixel
-	double res = XPU_GetDouble(nelmaDoc, XPATH_NELMA_RES);
+	double res = XPU_GetDouble(xemDoc, XPATH_NELMA_RES);
 	if(isnan(res))
 		goto processingFault;
-	xmlChar* units = XPU_SimpleLookup(nelmaDoc, XPATH_NELMA_RES_UNITS);
+	xmlChar* units = XPU_SimpleLookup(xemDoc, XPATH_NELMA_RES_UNITS);
 	res = MATRL_ScaleToMeters(res, (char*)units);
 	fprintf(stdout, "adjusted res: %g\n", res);
 
@@ -223,7 +222,7 @@ int execute_conversion(const char* filename)
 	// board dimensions are the same as the height and width
 	fRect* boardOutlineLayer = NULL;
 	char layerFname[0x400];
-	getLayerFilename(nelmaFilename, layerFname, "outline");
+	getLayerFilename(xemFilename, layerFname, "outline");
 //	fprintf(stdout, "outline fname: %s\n",layerFname);
 	if(LAYER_ReadPng(layerFname))
 	{
@@ -255,7 +254,7 @@ int execute_conversion(const char* filename)
 		xmlNodePtr currLayer = xnsLayers->nodeTab[i];
 		if(currLayer == NULL)
 		{
-			xmlFreeDoc(nelmaDoc);
+			xmlFreeDoc(xemDoc);
 			xmlFreeDoc(boardDoc);
 			return(-1);
 		}
@@ -316,7 +315,7 @@ int execute_conversion(const char* filename)
 			else
 				fRectCurrent = FRECT_Clone(fillLayer);
 			fprintf(stdout, "WARNING: need to process a real layer of traces for: %s\n", layerName);
-			getLayerFilename(nelmaFilename, layerFname, (char*)layerName);
+			getLayerFilename(xemFilename, layerFname, (char*)layerName);
 			fprintf(stdout, ": %s\n",layerFname);
 			if(LAYER_ReadPng(layerFname))
 			{
@@ -422,13 +421,13 @@ printf("bottom\n");
 	}
 	fclose(mlfd);
 #endif	
-	xmlNodeSetPtr xnsDrills  = XPU_GetNodeSet(nelmaDoc, XPATH_NELMA_DRILLS);
+	xmlNodeSetPtr xnsDrills  = XPU_GetNodeSet(xemDoc, XPATH_NELMA_DRILLS);
 	
 
 	retval = MV_ProcessDrillNodeSet(stdout, xnsDrills, zVoxelBottom, zVoxelTop, 2);
 	
 	fprintf(stderr, "processing complete, no errors encountered\n");
-	xmlFreeDoc(nelmaDoc);
+	xmlFreeDoc(xemDoc);
 	xmlFreeDoc(boardDoc);
 	return(0);
 

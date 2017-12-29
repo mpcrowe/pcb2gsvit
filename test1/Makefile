@@ -49,16 +49,18 @@ gsvit: $(PROJECT).gsvit.em $(PROJECT).xy
 	
 
 %.gsvit.em: $(PROJECT).pcb
-	/home/crowe/temp/pcb/pcb/src/pcb -x gsvit --dpi 200 $(PROJECT).pcb
+	$(PCB) -x gsvit --dpi 200 $(PROJECT).pcb
 	rm *.save
-
 
 workTemp:
 	mkdir workTemp
-
 	
 sch:
 	$(GSCHEM) $(PROJECT).sch
+	
+test: gsvit
+	../src/pcb2gsvit boardInfo.xml
+
 
 dist: $(SRCS) $(AUX)
 #       echo gcdc_tool-`sed -e '/version_string/!d' -e 's/[^0-9.]*\([0-9.]*\).*/\1/' -e q version.c` > .fname
