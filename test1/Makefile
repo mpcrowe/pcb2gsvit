@@ -18,7 +18,7 @@ AUX = Makefile attribs rules.txt
 
 BIN_PATH=/usr/bin
 #LOCAL_BIN_PATH=/home/crowe/temp/pcb/git-pcb/bert/pcb/src
-LOCAL_BIN_PATH=/home/crowe/temp/pcb/git-pcb/working/pcb/src
+LOCAL_BIN_PATH=../../pcb/src
 PCB = $(LOCAL_BIN_PATH)/pcb
 GSCHEM = $(BIN_PATH)/gschem
 DATE =  $(shell date +%Y%m%d)
@@ -26,6 +26,7 @@ DATE =  $(shell date +%Y%m%d)
 GEDA_SHARED_PATH=/opt/geda_shared
 SCRIPT_PATH = $(GEDA_SHARED_PATH)/bin
 PCB_FOOTPRINT_PATH = $(GEDA_SHARED_PATH)
+PARAVIEW = ../../paraview/ParaView-5.5.0-Qt5-MPI-Linux-64bit/bin/paraview
 
 TEMP_PATH=/tmp
 
@@ -64,8 +65,14 @@ test: gsvit
 	
 gsvit_test: test
 	mkdir -p vout
-	/home/crowe/temp/svn-gsvit/gsvit/src3d/gsvit first.par
+	gsvit first.par
 
+test_display:
+	$(PARAVIEW) temp.xdmf
+
+display: medLin.bin
+
+	$(PARAVIEW) test1.xdmf
 
 dist: $(SRCS) $(AUX)
 #       echo gcdc_tool-`sed -e '/version_string/!d' -e 's/[^0-9.]*\([0-9.]*\).*/\1/' -e q version.c` > .fname
