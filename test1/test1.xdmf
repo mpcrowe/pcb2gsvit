@@ -1,38 +1,29 @@
-<?xml version="1.0" ?>
-<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
-<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">
-<Domain>
+<?xml version="1.0" encoding="utf-8"?>
+<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="3.0">
+  <Domain>
+    <Grid Name="Structured Grid" GridType="Uniform">
+      <Geometry Origin="" Type="ORIGIN_DXDYDZ">
+        <DataItem Name="Origin" DataType="Float" Dimensions="3" Format="XML" Precision="8">0 0 0</DataItem>
+        <DataItem Name="Spacing" DataType="Float" Dimensions="3" Format="XML" Precision="8">1 1 1</DataItem>
+      </Geometry>
+      <Topology Dimensions="173 94 44" Type="3DCoRectMesh"/>
+      <Attribute Name="Er" Center="Node" ElementCell="" ElementDegree="0" ElementFamily="" ItemType="" Type="Scalar">
+        <DataItem DataType="Float" Dimensions="173 94 44" Format="Binary"  Precision="4" Endian="Little" NumberType="Float" Seek="12">
+		medLin.raw
+        </DataItem>
+      </Attribute>
 
-	<Grid Name="Structured Grid" GridType="Uniform">
-		<Topology TopologyType="3DCORECTMesh" NumberOfElements="173 94 44"/>
+      <Attribute Name="Conductivity" Center="Node" ElementCell=""  ElementDegree="0" ElementFamily="" ItemType="" Type="Scalar">
+        <DataItem  DataType="Float" Dimensions="173 94 44" Format="Binary"  Precision="4" Endian="Little" NumberType="Float" Seek="2862124">
+		medLin.raw
+        </DataItem>
+      </Attribute>
 
-		<Geometry GeometryType="ORIGIN_DXDYDZ">
-			<DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">
-				0 0 0
-			</DataItem>
-			<DataItem Name="Spacing" Dimensions="3" NumberType="Float" Precision="4" Format="XML">
-				0.127e-3 0.127e-3 0.127e-3 
-       			</DataItem>
-		</Geometry>
-
-
-		<Attribute Name="Er" AttributeType="Scalar" Center="Node">
-			<DataItem Dimensions="173 94 44" NumberType="Float" Precision="4" Format="Binary" Endian="Little" Seek="12">
-			medLin.raw
-			</DataItem>
-		</Attribute>
-
-		<Attribute Name="Conductivity" AttributeType="Scalar" Center="Node">
-			<DataItem Dimensions="173 94 44" NumberType="Float" Precision="4" Format="Binary" Endian="Little" Seek="2862124">
-			medLin.raw
-			</DataItem>
-		</Attribute>
-
-		<Attribute Name="Vout 80" AttributeType="Scalar" Center="Node">
-			<DataItem Dimensions="173 94 44" NumberType="Float" Precision="8" Format="Binary" Endian="Little" Seek="0">
-			./vout/voutput1_0380.raw
-			</DataItem>
-		</Attribute>
+      <Attribute Name="Vout 80" Center="Node" ElementCell=""  ElementDegree="0" ElementFamily="" ItemType="" Type="Scalar">
+        <DataItem DataType="Float" Dimensions="173 94 44" Format="Binary"  Precision="4" Endian="Little" NumberType="Float" Seek="0">
+		./vout/voutput1_0380.raw
+        </DataItem>
+      </Attribute>
 
 <!--
 		<Attribute Name="ez_r" AttributeType="Scalar" Center="Node">
