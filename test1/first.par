@@ -2,7 +2,7 @@ POOL
 173 94 44 1e-06 1e-06 1e-06
 
 COMP
-400
+100
 
 VERBOSE
 1
@@ -11,7 +11,7 @@ THREADS
 -1
 
 GPU
-0
+1
 
 UGPU
 0
@@ -44,5 +44,5 @@ OUT_IMAGE
 Ez 1 -1 -1 19 top
 
 OUT_VOLUME
-All 10 80 380 0 /home/crowe/temp/pcb2gsvit/test1/vout/voutput1
+All 10 80 380 0 vout/voutput1
 
