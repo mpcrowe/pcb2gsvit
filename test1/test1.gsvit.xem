@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gsvit>
 	<comment>Made with PCB gsvit export HID</comment>
-	<genTime>Fri Dec 29 15:45:03 2017</genTime>
+	<genTime>Mon Apr  2 21:38:52 2018</genTime>
 	<space>
-		<comment> **** Space **** </comment>
+		<comment>***** Space *****</comment>
 		<resolution units="mm">0.127000</resolution>
 		<width>173</width>
 		<height>94</height>
@@ -11,17 +11,15 @@
 			<layer name="bottom">test1.gsvit.bottom.png</layer>
 			<layer name="top">test1.gsvit.top.png</layer>
 			<layer name="outline">test1.gsvit.outline.png</layer>
-			
 		</layers>
 	</space>
 	<nets>
-		<comment>***** Nets ****</comment>
+		<comment>***** Nets *****</comment>
 		<net name="GND">R1.2</net>
 		<net name="mstrip1">R1.1, START.1</net>
 	</nets>
-
 	<centroids>
-		<comment>***** Centroids ****</comment>
+		<comment>***** Centroids *****</comment>
 		<xy name="START">
 			<description>test_point_smt_50</description>
 			<value>unknown</value>
@@ -29,7 +27,7 @@
 			<rotation>0</rotation>
 			<side>top</side>
 		</xy>
-	<xy name="R1">
+		<xy name="R1">
 			<description>0603__ROHM</description>
 			<value>10k</value>
 			<pos>132,45</pos>
@@ -37,12 +35,12 @@
 			<side>top</side>
 		</xy>
 	</centroids>
-
 	<drills>
-		<comment>***** Drills ****</comment>
+		<comment>***** Drills *****</comment>
 		<drill id="D0">
 			<dia_inches>0.012</dia_inches>
 			<radius>1</radius>
 			<pos type="plated">132,64</pos>
-			</drill></drills>
+		</drill>
+	</drills>
 </gsvit>
