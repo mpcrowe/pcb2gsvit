@@ -20,7 +20,7 @@
       </Attribute>
 
       <Attribute Name="Vout 80" Center="Node" ElementCell=""  ElementDegree="0" ElementFamily="" ItemType="" Type="Scalar">
-        <DataItem DataType="Float" Dimensions="173 94 44" Format="Binary"  Precision="4" Endian="Little" NumberType="Float" Seek="0">
+        <DataItem DataType="Float" Dimensions="173 94 44" Format="Binary"  Precision="8" Endian="Little" NumberType="Float" Seek="0">
 		./vout/voutput1_0380.raw
         </DataItem>
       </Attribute>
