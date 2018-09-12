@@ -269,6 +269,10 @@ int main(int argc, char* argv[])
 		return(retval);
 	}	
 	setDerivativeParameters(); // initialize 
+	dim3 size = {100,100,100};
+	SimulationSpace_Create(&size);
+
+	SimulationSpace_Destroy();
 
 	runTest(0); // x derivative
 	runTest(1); // y derivative
