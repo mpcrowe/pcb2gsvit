@@ -156,6 +156,8 @@ void initInput(float *f, int dim)
 	}     
 }
 
+
+
 void initSol(float *sol, int dim)
 {
 	const float twopi = 8.f * (float)atan(1.0);
@@ -502,6 +504,110 @@ extern "C" void runTest(int dimension)
   delete [] f;
   delete [] df;
   delete [] sol;
+}
+
+struct simulation_space
+{
+	dim3 size;
+	float* d_dField;
+	float* d_eField;
+	float* d_hField;
+	float* d_i;
+	float* d_ga;
+	float* d_gb;
+};
+
+
+struct simulation_space simSpaceX;
+struct simulation_space simSpaceY;
+struct simulation_space simSpaceZ;
+
+float* cpuWorkingSpace;
+
+template <typename T>
+__global__ void arraySet(int n, T* ptr, T val)
+{
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	int stride = blockDim.x * gridDim.x;
+	for (int i = index; i < n; i += stride)
+		ptr[i] = val;
+}
+
+
+extern int SimulationSpace_Reset( struct simulation_space* pSpace)
+{
+	int retval = 0;
+	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.x * sizeof(float);
+	retval += checkCuda( cudaMemset(pSpace->d_hField, 0, bytes) );
+	retval += checkCuda( cudaMemset(pSpace->d_hField, 0, bytes) );
+	retval += checkCuda( cudaMemset(pSpace->d_hField, 0, bytes) );
+	retval += checkCuda( cudaMemset(pSpace->d_i, 0, bytes) );
+
+//	int i;
+// ga needs to default to 1.0 instead of zero, and it's a float so
+// manually set for now (fixme create a cuda function that sets a float to a memory space)
+//	for(i=0; i<(bytes/sizeof(float)); i++)
+//		cpuWorkingSpace[i] = 1.0;
+//	retval += checkCuda( cudaMemcpy(pSpace->d_ga, cpuWorkingSpace, bytes, cudaMemcpyHostToDevice) );
+//	retval += checkCuda( cudaMemset(pSpace->d_ga, 0, bytes) );
+
+	int blockSize = 256;
+	int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
+	arraySet<<<numBlocks, blockSize>>>(bytes/sizeof(float), pSpace->d_ga, (float)1.0);
+
+	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, bytes) );
+	return(retval);
+}
+
+// initialze simulation space to all zeros
+extern int SimulationSpace_ResetFields(void)
+{
+	int retval = 0;
+	retval += SimulationSpace_Reset(&simSpaceX);
+	retval += SimulationSpace_Reset(&simSpaceY);
+	retval += SimulationSpace_Reset(&simSpaceZ);
+	return(retval);
+}
+
+
+// allocates storage on the GPU to store the simulation state information,
+// based on the size of the supplied geometry
+extern int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pSpace)
+{
+        int retval = 0;
+	pSpace->size.x = sim_size->x;
+	pSpace->size.y = sim_size->y;
+	pSpace->size.x = sim_size->z;
+	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.x * sizeof(float);
+
+	cpuWorkingSpace = (float*)malloc(bytes);
+	
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_dField, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_eField, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_hField, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_i, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes) );
+
+	retval += SimulationSpace_ResetFields();
+
+	return(retval);	
+}
+
+
+// allocates storage on the GPU to store the simulation state information,
+// based on the size of the supplied geometry
+extern int SimulationSpace_Create(dim3* sim_size)
+{
+        int retval = 0;
+
+	retval += SimulationSpace_CreateDim(sim_size, &simSpaceX);
+	retval += SimulationSpace_CreateDim(sim_size, &simSpaceY);
+	retval += SimulationSpace_CreateDim(sim_size, &simSpaceZ);
+
+	retval += SimulationSpace_ResetFields();
+
+	return(retval);	
 }
 
 

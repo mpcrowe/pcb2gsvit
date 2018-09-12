@@ -33,12 +33,12 @@ static void processNode(xmlTextReaderPtr reader)
 		printf("none\n");
 	break;
 	case XML_READER_TYPE_ELEMENT:// = 1,
-		printf("start element\n");
+		printf("start element %s\n", name);
 	break;
 	case XML_READER_TYPE_ATTRIBUTE:// = 2,
 	break;
 	case XML_READER_TYPE_TEXT:// = 3,
-		printf("text\n");
+		printf("text %s\n", name);
 	break;
 	case XML_READER_TYPE_CDATA:// = 4,
 		printf("cdata\n");
@@ -67,10 +67,10 @@ static void processNode(xmlTextReaderPtr reader)
 	case XML_READER_TYPE_WHITESPACE:// = 13,
 	break;
 	case XML_READER_TYPE_SIGNIFICANT_WHITESPACE:// = 14,
-		printf("whitespace\n");
+//		printf("whitespace\n");
 	break;
 	case XML_READER_TYPE_END_ELEMENT:// = 15,
-		printf("end element\n");
+		printf("end element %s\n", name);
 	break;
 	case XML_READER_TYPE_END_ENTITY:// = 16,
 	break;
@@ -80,13 +80,15 @@ static void processNode(xmlTextReaderPtr reader)
 	break;
 	}
 
-	printf("%d %d %s %d", xmlTextReaderDepth(reader), xmlTextReaderNodeType(reader), name,	xmlTextReaderIsEmptyElement(reader));
+//	printf("%d %d %s %d", xmlTextReaderDepth(reader), xmlTextReaderNodeType(reader), name,	xmlTextReaderIsEmptyElement(reader));
 	xmlFree(name);
 	if (value == NULL)
-		printf("\n");
+	{
+//		printf("\n");
+	}
 	else
 	{
-		printf(" \"%s\"\n", value);
+//		printf(" \"%s\"\n", value);
 		xmlFree(value);
 	}
 }

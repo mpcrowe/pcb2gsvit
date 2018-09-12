@@ -57,12 +57,15 @@ clean:
 	rm -rf $(PROJECT)$(OS_EXTENSION) $(PROJECT2)$(OS_EXTENSION) *~ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) doc
 
 $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS) $(NVCC_OBJ)
-	$(ALINK) -o $@ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) $(ALIBS) $(ALIBS_XML)
+	@echo linking
+	@$(ALINK) -o $@ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) $(ALIBS) $(ALIBS_XML)
 	
 %.o: %.c
+	@echo compiling $<
 	@$(CC) -c $(CFLAGS) $(DEBUG) $<
 
 %.o: %.cu
+	@echo compiling $< with NVCC
 	@$(NVCC) -o $@ -c $< $(NVCCFLAGS)
 
 
