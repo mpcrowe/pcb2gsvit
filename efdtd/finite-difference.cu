@@ -521,11 +521,11 @@ struct simulation_space
 };
 
 
-struct simulation_space simSpaceX;
-struct simulation_space simSpaceY;
-struct simulation_space simSpaceZ;
-
-float* cpuWorkingSpace;
+// fixme wrap these things into a structure 
+struct simulation_space simSpaceX;	// x component fields
+struct simulation_space simSpaceY;	// y component fields
+struct simulation_space simSpaceZ;	// z component fields
+float* cpuWorkingSpace;		// this is a space the same size as the volume as we work with in the GPU, use it as a temporary work space
 
 template <typename T>
 __global__ void arraySet(int n, T* ptr, T val)
