@@ -62,6 +62,8 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 	materialTable[0].name = (xmlChar*)"default";
 	materialTable[0].defaultThickness = (xmlChar*)"0.01";  // in  meters
 	materialTable[0].er = 1.0;
+	materialTable[0].ur = 1.0;
+	materialTable[0].sus = 0.0;
 	materialTable[0].conductivity = 8.0e-15; // mho/m
 	
 	for(i=1; i<xnsMaterials->nodeNr +1; i++)
@@ -69,6 +71,8 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 		materialTable[i].name = (xmlChar*)"unused";
 		materialTable[i].defaultThickness = (xmlChar*)"0.01";  // in  meters
 		materialTable[i].er = 1.0;
+		materialTable[i].ur = 1.0;
+		materialTable[i].sus = 0.0;
 		materialTable[i].conductivity = 8.0e-15; // mho/m
 	}
 	for(i = 0; i<xnsMaterials->nodeNr; i++)
@@ -115,6 +119,8 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 			materialTable[0].defaultThickness = matCur.defaultThickness;
 			materialTable[0].er = matCur.er;
 			materialTable[0].conductivity = matCur.conductivity;
+			materialTable[0].ur = matCur.ur;
+			materialTable[0].sus = matCur.sus;
 		}
 		else
 		{
@@ -122,6 +128,8 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 			materialTable[j].defaultThickness = matCur.defaultThickness;
 			materialTable[j].er = matCur.er;
 			materialTable[j].conductivity = matCur.conductivity;
+			materialTable[j].ur = matCur.ur;
+			materialTable[j].sus = matCur.sus;
 			j++;
 		}
 	}

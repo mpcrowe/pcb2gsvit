@@ -419,6 +419,53 @@ printf("bottom\n");
 			
 		}
 	}
+	fprintf(stdout, "starting Ur\n");
+	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
+	for(i=0; i<width; i++)
+	{
+		for(j=0; j<height; j++)
+		{
+			float* pSlice = fSlice;
+			GList *l;
+			for (l = gLayers; l != NULL; l = l->next)
+			{
+				// do something with l->data
+				int index = ((fRect*)(l->data))->data[i][j];
+				*pSlice++ = 1.0;
+//				*pSlice++ = MATRL_Ur(index);
+			}
+			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+			if(retval != depth)
+			{
+				fprintf(stderr, "file write error %d!=%d", retval, depth);
+				goto processingFault;
+			}
+			
+		}
+	}
+	fprintf(stdout, "starting magnetic conductivity (susceptibility)\n");
+	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
+	for(i=0; i<width; i++)
+	{
+		for(j=0; j<height; j++)
+		{
+			float* pSlice = fSlice;
+			GList *l;
+			for (l = gLayers; l != NULL; l = l->next)
+			{
+				int index = ((fRect*)(l->data))->data[i][j];
+//				*pSlice++ = MATRL_Sus(index);
+				*pSlice++ = 0.0;
+			}
+			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+			if(retval != depth)
+			{
+				fprintf(stderr, "file write error %d!=%d", retval, depth);
+				goto processingFault;
+			}
+		}
+	}
+
 	fclose(mlfd);
 #endif	
 	xmlNodeSetPtr xnsDrills  = XPU_GetNodeSet(xemDoc, XPATH_NELMA_DRILLS);
