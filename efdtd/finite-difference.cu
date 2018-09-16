@@ -45,8 +45,9 @@ inline cudaError_t checkCuda(cudaError_t result)
 	return result;
 }
 
-float fx = 1.0f, fy = 1.0f, fz = 1.0f;
-const int mx = 64, my = 64, mz = 64;
+float fx = 6.0f, fy = 1.0f, fz = 1.0f;
+const int mx = 256, my = 256, mz = 256;
+__constant__ int c_mx, c_my, c_mz;
 
 // shared memory tiles will be m*-by-*Pencils
 // sPencils is used when each thread calculates the derivative at one point
@@ -87,6 +88,10 @@ extern "C" void setDerivativeParameters()
 	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float), 0, cudaMemcpyHostToDevice) );
 	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float), 0, cudaMemcpyHostToDevice) );
 	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+
+	checkCuda( cudaMemcpyToSymbol(c_mx, &mx, sizeof(int), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_my, &my, sizeof(int), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_mz, &mz, sizeof(int), 0, cudaMemcpyHostToDevice) );
 
 	dsinv = my-1.f;
 
@@ -210,7 +215,7 @@ void checkResults(double &error, double &maxError, float *sol, float *df)
 
 __global__ void derivative_x(float *f, float *df)
 {
-	__shared__ float s_f[sPencils][mx+8]; // 4-wide halo
+	__shared__ float s_f[sPencils][c_mx+8]; // 4-wide halo
 
 	int i   = threadIdx.x;
 	int j   = blockIdx.x*blockDim.y + threadIdx.y;
@@ -218,7 +223,7 @@ __global__ void derivative_x(float *f, float *df)
 	int si = i + 4;       // local i for shared memory access + halo offset
 	int sj = threadIdx.y; // local j for shared memory access
 
-	int globalIdx = k * mx * my + j * mx + i;
+	int globalIdx = k * c_mx * my + j * c_mx + i;
 
 	s_f[sj][si] = f[globalIdx];
 
@@ -226,13 +231,13 @@ __global__ void derivative_x(float *f, float *df)
 
 	// fill in periodic images in shared memory array
 	if (i < 4) {
-		s_f[sj][si-4]  = s_f[sj][si+mx-5];
-		s_f[sj][si+mx] = s_f[sj][si+1];
+		s_f[sj][si-4]  = s_f[sj][si+c_mx-5];
+		s_f[sj][si+c_mx] = s_f[sj][si+1];
 	}
 
 	__syncthreads();
 
-	df[globalIdx] =
+	df[globalIdx] +=
 		( c_ax * ( s_f[sj][si+1] - s_f[sj][si-1] )
 		+ c_bx * ( s_f[sj][si+2] - s_f[sj][si-2] )
 		+ c_cx * ( s_f[sj][si+3] - s_f[sj][si-3] )
@@ -472,12 +477,15 @@ extern "C" void runTest(int dimension)
 
   for (int fp = 0; fp < 2; fp++) {
     checkCuda( cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice) );
-    checkCuda( cudaMemset(d_df, 0, bytes) );
 
     fpDeriv[fp]<<<grid[dimension][fp],block[dimension][fp]>>>(d_f, d_df); // warm up
     checkCuda( cudaEventRecord(startEvent, 0) );
     for (int i = 0; i < nReps; i++)
+	{
+	    checkCuda( cudaMemset(d_df, 0, bytes) );
+
        fpDeriv[fp]<<<grid[dimension][fp],block[dimension][fp]>>>(d_f, d_df);
+}
 
     checkCuda( cudaEventRecord(stopEvent, 0) );
     checkCuda( cudaEventSynchronize(stopEvent) );
