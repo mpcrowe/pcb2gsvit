@@ -215,33 +215,35 @@ void checkResults(double &error, double &maxError, float *sol, float *df)
 
 __global__ void derivative_x(float *f, float *df)
 {
-	__shared__ float s_f[sPencils][c_mx+8]; // 4-wide halo
+//	__shared__ float s_f[sPencils][c_mx+8]; // 4-wide halo
+	extern __shared__ float s_f[]; // 4-wide halo
 
 	int i   = threadIdx.x;
 	int j   = blockIdx.x*blockDim.y + threadIdx.y;
 	int k  = blockIdx.y;
 	int si = i + 4;       // local i for shared memory access + halo offset
-	int sj = threadIdx.y; // local j for shared memory access
+	int sj = (c_mx+8)*threadIdx.y; // local j for shared memory access
 
 	int globalIdx = k * c_mx * my + j * c_mx + i;
 
-	s_f[sj][si] = f[globalIdx];
+//	s_f[sj][si] = f[globalIdx];
+	s_f[sj+si] = f[globalIdx];
 
 	__syncthreads();
 
 	// fill in periodic images in shared memory array
 	if (i < 4) {
-		s_f[sj][si-4]  = s_f[sj][si+c_mx-5];
-		s_f[sj][si+c_mx] = s_f[sj][si+1];
+		s_f[sj+si-4]  = s_f[sj+si+c_mx-5];
+		s_f[sj+si+c_mx] = s_f[sj+si+1];
 	}
 
 	__syncthreads();
 
 	df[globalIdx] +=
-		( c_ax * ( s_f[sj][si+1] - s_f[sj][si-1] )
-		+ c_bx * ( s_f[sj][si+2] - s_f[sj][si-2] )
-		+ c_cx * ( s_f[sj][si+3] - s_f[sj][si-3] )
-		+ c_dx * ( s_f[sj][si+4] - s_f[sj][si-4] ) );
+		( c_ax * ( s_f[sj+si+1] - s_f[sj+si-1] )
+		+ c_bx * ( s_f[sj+si+2] - s_f[sj+si-2] )
+		+ c_cx * ( s_f[sj+si+3] - s_f[sj+si-3] )
+		+ c_dx * ( s_f[sj+si+4] - s_f[sj+si-4] ) );
 }
 
 
@@ -478,13 +480,13 @@ extern "C" void runTest(int dimension)
   for (int fp = 0; fp < 2; fp++) {
     checkCuda( cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice) );
 
-    fpDeriv[fp]<<<grid[dimension][fp],block[dimension][fp]>>>(d_f, d_df); // warm up
+    fpDeriv[fp]<<<grid[dimension][fp],block[dimension][fp],0x2000>>>(d_f, d_df); // warm up
     checkCuda( cudaEventRecord(startEvent, 0) );
     for (int i = 0; i < nReps; i++)
 	{
 	    checkCuda( cudaMemset(d_df, 0, bytes) );
 
-       fpDeriv[fp]<<<grid[dimension][fp],block[dimension][fp]>>>(d_f, d_df);
+       fpDeriv[fp]<<<grid[dimension][fp],block[dimension][fp],0x2000>>>(d_f, d_df);
 }
 
     checkCuda( cudaEventRecord(stopEvent, 0) );
