@@ -25,6 +25,16 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+
+/* 
+*based on 
+* Mark Harris March 2013 "Finite Difference Methods in CUDA C/C++, Part 1"
+*for details see
+*https://devblogs.nvidia.com/finite-difference-methods-cuda-cc-part-1
+*/
+
+
+
 #include <stdio.h>
 #include <assert.h>
 extern "C" {
