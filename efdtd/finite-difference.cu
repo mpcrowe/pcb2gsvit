@@ -1,29 +1,39 @@
 /* Copyright (c) 1993-2015, NVIDIA CORPORATION. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *  * Neither the name of NVIDIA CORPORATION nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+*  * Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+*  * Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*  * Neither the name of NVIDIA CORPORATION nor the names of its
+*    contributors may be used to endorse or promote products derived
+*    from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+* PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+* OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
+/* 
+*based on 
+* Mark Harris March 2013 "Finite Difference Methods in CUDA C/C++, Part 1"
+*for details see
+*https://devblogs.nvidia.com/finite-difference-methods-cuda-cc-part-1
+*/
+
+
 
 #include <stdio.h>
 #include <assert.h>
@@ -60,8 +70,11 @@ dim3 grid[3][2], block[3][2];
 
 // stencil coefficients
 __constant__ float c_ax, c_bx, c_cx, c_dx;
+__constant__ float c_axn, c_bxn, c_cxn, c_dxn;
 __constant__ float c_ay, c_by, c_cy, c_dy;
 __constant__ float c_az, c_bz, c_cz, c_dz;
+
+__constant__ float c_coef_x[9];
 
 // host routine to set constant data
 extern "C" void setDerivativeParameters()
@@ -79,7 +92,6 @@ extern "C" void setDerivativeParameters()
 
 	// stencil weights (for unit length problem)
 	float dsinv = mx-1.f;
-
 	float ax =  4.f / 5.f   * dsinv;
 	float bx = -1.f / 5.f   * dsinv;
 	float cx =  4.f / 105.f * dsinv;
@@ -88,13 +100,32 @@ extern "C" void setDerivativeParameters()
 	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float), 0, cudaMemcpyHostToDevice) );
 	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float), 0, cudaMemcpyHostToDevice) );
 	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	ax = -ax;
+	bx = -bx;
+	cx =  -cx;
+	dx = -dx;
+	checkCuda( cudaMemcpyToSymbol(c_axn, &ax, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_bxn, &bx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_cxn, &cx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_dxn, &dx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+
+	float coef_x[9];
+	coef_x[0] = (1.f  / 280.f) * dsinv;	// -dx
+	coef_x[1] = (-4.f / 105.f) * dsinv;	// -cx
+	coef_x[2] = (1.f  / 5.f)   * dsinv;	// -bx
+	coef_x[3] = (-4.f / 5.f)   * dsinv;	// -ax
+	coef_x[4] = 0.f;
+	coef_x[5] = (4.f  / 5.f)   * dsinv;	// ax
+	coef_x[6] = (-1.f / 5.f)   * dsinv;	// bx
+	coef_x[7] = (4.f  / 105.f) * dsinv;	// cx
+	coef_x[8] = (-1.f / 280.f) * dsinv;	// dx
+	checkCuda( cudaMemcpyToSymbol(c_coef_x, coef_x, 9* sizeof(float)) );
 
 	checkCuda( cudaMemcpyToSymbol(c_mx, &mx, sizeof(int), 0, cudaMemcpyHostToDevice) );
 	checkCuda( cudaMemcpyToSymbol(c_my, &my, sizeof(int), 0, cudaMemcpyHostToDevice) );
 	checkCuda( cudaMemcpyToSymbol(c_mz, &mz, sizeof(int), 0, cudaMemcpyHostToDevice) );
 
 	dsinv = my-1.f;
-
 	float ay =  4.f / 5.f   * dsinv;
 	float by = -1.f / 5.f   * dsinv;
 	float cy =  4.f / 105.f * dsinv;
@@ -105,7 +136,6 @@ extern "C" void setDerivativeParameters()
 	checkCuda( cudaMemcpyToSymbol(c_dy, &dy, sizeof(float), 0, cudaMemcpyHostToDevice) );
 
 	dsinv = mz-1.f;
-
 	float az =  4.f / 5.f   * dsinv;
 	float bz = -1.f / 5.f   * dsinv;
 	float cz =  4.f / 105.f * dsinv;
@@ -213,9 +243,8 @@ void checkResults(double &error, double &maxError, float *sol, float *df)
 // x derivatives
 // -------------
 
-__global__ void derivative_x(float *f, float *df)
+__global__ void derivative_x1(float *f, float *df)
 {
-//	__shared__ float s_f[sPencils][c_mx+8]; // 4-wide halo
 	extern __shared__ float s_f[]; // 4-wide halo
 
 	int i   = threadIdx.x;
@@ -226,7 +255,6 @@ __global__ void derivative_x(float *f, float *df)
 
 	int globalIdx = k * c_mx * my + j * c_mx + i;
 
-//	s_f[sj][si] = f[globalIdx];
 	s_f[sj+si] = f[globalIdx];
 
 	__syncthreads();
@@ -244,6 +272,41 @@ __global__ void derivative_x(float *f, float *df)
 		+ c_bx * ( s_f[sj+si+2] - s_f[sj+si-2] )
 		+ c_cx * ( s_f[sj+si+3] - s_f[sj+si-3] )
 		+ c_dx * ( s_f[sj+si+4] - s_f[sj+si-4] ) );
+}
+
+
+__global__ void derivative_x(float *f, float *df)
+{
+	extern __shared__ float s_f[]; // 4-wide halo
+
+	int i   = threadIdx.x;
+	int j   = blockIdx.x*blockDim.y + threadIdx.y;
+	int k  = blockIdx.y;
+	int si = i + 4;       // local i for shared memory access + halo offset
+	int sj = (c_mx+8)*threadIdx.y; // local j for shared memory access
+
+	int globalIdx = k * c_mx * my + j * c_mx + i;
+
+	s_f[sj+si] = f[globalIdx];
+
+	__syncthreads();
+
+	// fill in periodic images in shared memory array
+	if (i < 4) {
+		s_f[sj+si-4]  = s_f[sj+si+c_mx-5];
+		s_f[sj+si+c_mx] = s_f[sj+si+1];
+	}
+
+	__syncthreads();
+
+	// the taylor series expansion has been reformulated to look like a FIR filter
+	float* z = &s_f[sj+si-4];
+	float* c = c_coef_x;
+	int count = 9;
+	
+	while(count--)
+		 df[globalIdx] += (*c++)*(*z++);
+	
 }
 
 
@@ -594,7 +657,7 @@ struct simulation_space
 };
 
 
-// fixme wrap these things into a structure 
+// fixme wrap these things into a structure
 struct simulation_space simSpaceX;	// x component fields
 struct simulation_space simSpaceY;	// y component fields
 struct simulation_space simSpaceZ;	// z component fields
