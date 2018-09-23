@@ -320,6 +320,38 @@ __global__ void derivative_y(float *f, float *df)
     + c_dy * ( s_f[sj+4][si] - s_f[sj-4][si] ) );
 }
 
+
+__global__ void derivative_y1(float *f, float *df)
+{
+//  __shared__ float s_f[my+8][sPencils];
+	extern __shared__ float s_f[]; // 4-wide halo
+
+  int i  = blockIdx.x*blockDim.x + threadIdx.x;
+  int j  = threadIdx.y;
+  int k  = blockIdx.y;
+  int si = threadIdx.x;
+  int sj = j + 4;
+
+  int globalIdx = k * c_mx * c_my + j * c_mx + i;
+
+  s_f[(sPencils)*sj+si] = f[globalIdx];
+
+  __syncthreads();
+
+  if (j < 4) {
+    s_f[(sPencils)*(sj-4)+si]  = s_f[(sPencils)*(sj+c_my-5)+si];
+    s_f[(sPencils)*(sj+c_my)+si] = s_f[(sPencils)*(sj+1)+si];
+  }
+
+  __syncthreads();
+
+  df[globalIdx] +=
+    ( c_ay * ( s_f[(sPencils)*(sj+1)+si] - s_f[(sPencils)*(sj-1)+si] )
+    + c_by * ( s_f[(sPencils)*(sj+2)+si] - s_f[(sPencils)*(sj-2)+si] )
+    + c_cy * ( s_f[(sPencils)*(sj+3)+si] - s_f[(sPencils)*(sj-3)+si] )
+    + c_dy * ( s_f[(sPencils)*(sj+4)+si] - s_f[(sPencils)*(sj-4)+si] ) );
+}
+
 // y derivative using a tile of 32x64,
 // launch with thread block of 32x8
 __global__ void derivative_y_lPencils(float *f, float *df)
@@ -392,6 +424,37 @@ __global__ void derivative_z(float *f, float *df)
     + c_dz * ( s_f[sk+4][si] - s_f[sk-4][si] ) );
 }
 
+__global__ void derivative_zl(float *f, float *df)
+{
+//  __shared__ float s_f[mz+8][sPencils];
+	extern __shared__ float s_f[]; // 4-wide halo
+
+  int i  = blockIdx.x*blockDim.x + threadIdx.x;
+  int j  = blockIdx.y;
+  int k  = threadIdx.y;
+  int si = threadIdx.x;
+  int sk = k + 4; // halo offset
+
+  int globalIdx = k * mx * my + j * mx + i;
+
+  s_f[(sPencils)*sk+si] = f[globalIdx];
+
+  __syncthreads();
+
+  if (k < 4) {
+     s_f[(sPencils)*(sk-4)+si]  = s_f[(sPencils)*(sk+mz-5)+si];
+     s_f[(sPencils)*(sk+mz)+si] = s_f[(sPencils)*(sk+1)+si];
+  }
+
+  __syncthreads();
+
+  df[globalIdx] +=
+    ( c_az * ( s_f[(sPencils)*(sk+1)+si] - s_f[(sPencils)*(sk-1)+si] )
+    + c_bz * ( s_f[(sPencils)*(sk+2)+si] - s_f[(sPencils)*(sk-2)+si] )
+    + c_cz * ( s_f[(sPencils)*(sk+3)+si] - s_f[(sPencils)*(sk-3)+si] )
+    + c_dz * ( s_f[(sPencils)*(sk+4)+si] - s_f[(sPencils)*(sk-4)+si] ) );
+}
+
 __global__ void derivative_z_lPencils(float *f, float *df)
 {
   __shared__ float s_f[mz+8][lPencils];
@@ -438,11 +501,11 @@ extern "C" void runTest(int dimension)
       fpDeriv[1] = derivative_x_lPencils;
       break;
     case 1:
-      fpDeriv[0] = derivative_y;
+      fpDeriv[0] = derivative_y1;
       fpDeriv[1] = derivative_y_lPencils;
       break;
     case 2:
-      fpDeriv[0] = derivative_z;
+      fpDeriv[0] = derivative_zl;
       fpDeriv[1] = derivative_z_lPencils;
       break;
   }
