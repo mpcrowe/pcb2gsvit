@@ -367,7 +367,7 @@ __global__ void derivative_y_fixed(float *f, float *df)
 	__syncthreads();
 
 	if (j < 4)
-	{
+	{  // this wraps the derivative space into a circle,  probably not what is desired for a real world problem
 		s_f[sj-4][si]  = s_f[sj+my-5][si];
 		s_f[sj+my][si] = s_f[sj+1][si];
 	}
@@ -399,7 +399,7 @@ __global__ void derivativeAccumY(float *f, float *df)
 	__syncthreads();
 
 	if (j < 4)
-	{
+	{  // this wraps the space into a circle (ends overlap),  probably not what is desired for a real world problem
 		s_f[(sPencils)*(sj-4)+si]  = s_f[(sPencils)*(sj+c_my-5)+si];
 		s_f[(sPencils)*(sj+c_my)+si] = s_f[(sPencils)*(sj+1)+si];
 	}
@@ -559,8 +559,7 @@ extern "C" void runTest(int dimension)
 
 		checkResults(error, maxError, sol, df);
 
-		printf("  Using shared memory tile of %d x %d\n",
-			sharedDims[dimension][fp][0], sharedDims[dimension][fp][1]);
+		printf("  Using shared memory tile of %d x %d\n", sharedDims[dimension][fp][0], sharedDims[dimension][fp][1]);
 		printf("   RMS error: %e\n", error);
 		printf("   MAX error: %e\n", maxError);
 		printf("   Average time (ms): %f\n", milliseconds / nReps);
