@@ -578,14 +578,27 @@ extern "C" void runTest(int dimension)
 	delete [] sol;
 }
 
+
+
 // this work is based on
-//Dennis M. Sullivan "EM Simulation Using the FDTD Method", 2000 IEEE
+// Dennis M. Sullivan "EM Simulation Using the FDTD Method", 2000 IEEE
+
+// this structure is important because the curl computes the field in all
+// three directions, without a structure to maintain the relationships,
+// the bookeeping becomes complicated
+struct vector_field
+{
+	float* d_x;	// pointer to a "flat" 3-d space located on the GPU, one for each direction
+	float* d_y;
+	float* d_z;
+};
+
 struct simulation_space
 {
 	dim3 size;	// the size of the simulation space
-	float* d_dField;	// electric flux density, see Sullivan P.32 chapter 2.1
-	float* d_eField;	// the electrical field
-	float* d_hField;	// the magnetic field
+	struct vector_field dField;	// electric flux density, see Sullivan P.32 chapter 2.1
+	struct vector_field eField;	// the electrical field
+	struct vector_field hField;	// the magnetic field
 	float* d_i;		// a parameter that stores a current (efield* conductivity) like parameter
 	float* d_ga;		// relative permittivity (with some time varying things)
 	float* d_gb;		// the conductivity (some time varient 	stuff)
@@ -593,96 +606,80 @@ struct simulation_space
 
 
 // fixme wrap these things into a structure
-struct simulation_space simSpaceX;	// x component fields
-struct simulation_space simSpaceY;	// y component fields
-struct simulation_space simSpaceZ;	// z component fields
+struct simulation_space simSpace;	// component fields
 float* cpuWorkingSpace;		// this is a space the same size as the volume as we work with in the GPU, use it as a temporary work space
 
-static void partialX(float* dest, float* src, float scale)
+static void partialX(float* dest, float* src, float scale, dim3 size)
 {
-	int size_x = simSpaceX.size.x;
-	int size_y = simSpaceX.size.y;
-	int size_z = simSpaceX.size.z;
+	dim3 nBlocks_x  = dim3(size.y / sPencils, size.z, 1);
+	dim3 nThreads_x = dim3(size.x, sPencils, 1);
 
-	dim3 nBlocks_x  = dim3(size_y / sPencils, size_z, 1);
-	dim3 nThreads_x = dim3(size_x, sPencils, 1);
-
-	setDerivativeParametersX(size_x, scale);
+	setDerivativeParametersX(size.x, scale);
 	derivativeAccumX<<<nBlocks_x,nThreads_x,0x2000>>>(dest,src);
 }
 
 
-static void partialY(float* dest, float* src, float scale)
+static void partialY(float* dest, float* src, float scale, dim3 size)
 {
-	int size_x = simSpaceX.size.x;
-	int size_y = simSpaceX.size.y;
-	int size_z = simSpaceX.size.z;
+	dim3 nBlocks_y = dim3(size.x / sPencils, size.z, 1);
+        dim3 nThreads_y = dim3(sPencils, size.y, 1);
 
-	dim3 nBlocks_y = dim3(size_x / sPencils, size_z, 1);
-        dim3 nThreads_y = dim3(sPencils, size_y, 1);
-
-	setDerivativeParametersY(size_y, scale);
+	setDerivativeParametersY(size.y, scale);
 	derivativeAccumY<<<nBlocks_y,nThreads_y,0x2000>>>(dest,src);
 }
 
 
-static void partialZ(float* dest, float* src, float scale)
+static void partialZ(float* dest, float* src, float scale, dim3 size)
 {
-	int size_x = simSpaceX.size.x;
-	int size_y = simSpaceX.size.y;
-	int size_z = simSpaceX.size.z;
+        dim3 nBlocks_z  = dim3(size.x / sPencils, size.y, 1);
+        dim3 nThreads_z = dim3(sPencils, size.z, 1);
 
-        dim3 nBlocks_z  = dim3(size_x / sPencils, size_y, 1);
-        dim3 nThreads_z = dim3(sPencils, size_z, 1);
-
-	setDerivativeParametersZ(size_z, scale);
+	setDerivativeParametersZ(size.z, scale);
 	derivativeAccumZ<<<nBlocks_z,nThreads_z,0x2000>>>(dest,src);
 }
 
 
 // D(t+1) = D(t) + curl(H)
-void fluxDensityTimeStep(void)
+// this is used to compute the flux density and the magnetic field
+static void curlAccum(struct vector_field* dest, struct vector_field* src, float scale, dim3 size)
 {
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
     	// dHz/dy
-	partialY(simSpaceX.d_dField,simSpaceZ.d_hField, 1.0f);
+	partialY(dest->d_x, src->d_z, scale, size);
     	// -dHy/dz
-	partialZ(simSpaceX.d_dField,simSpaceY.d_hField, -1.0f);
+	partialZ(dest->d_x, src->d_y, -scale, size);
 
 	//Dy(t+1) = Dy(t)+ (dHx/dz - dHz/dx)
     	// dHx/dz
-	partialZ(simSpaceY.d_dField,simSpaceX.d_hField, 1.0f);
+	partialZ(dest->d_y, src->d_x, scale, size);
     	// -dHz/dx
-	partialX(simSpaceY.d_dField,simSpaceZ.d_hField, -1.0f);
+	partialX(dest->d_y, src->d_z, -scale, size);
 
 	//Dz(t+1) = Dz(t)+ (dHy/dx - dHx/dy)
     	// dHy/dx
-	partialX(simSpaceZ.d_dField,simSpaceY.d_hField, 1.0f);
+	partialX(dest->d_z, src->d_y, scale, size);
     	// -dHx/dy
-	partialY(simSpaceZ.d_dField,simSpaceX.d_hField, -1.0f);
+	partialY(dest->d_z, src->d_x, -scale, size);
+}
+
+
+// D(t+1) = D(t) + curl(H)
+// Dennis M. Sullivan "EM Simulation Using the FDTD Method", 2000 IEEE
+// p.80-81
+void fluxDensity_step(void)
+{
+	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
+	curlAccum(&simSpace.dField, &simSpace.hField, 1.0f, simSpace.size);
 }
 
 
 // H(t+1) = H(t) - curl(E)
-void magneticFieldTimeStep(void)
+// Dennis M. Sullivan "EM Simulation Using the FDTD Method", 2000 IEEE
+// p.80-81
+void magneticField_step(void)
 {
 	//Hx(t+1) = Hx(t)+ (dEy/dz - dEz/dy)
-    	// dEy/dz
-	partialZ(simSpaceX.d_hField, simSpaceY.d_eField, 1.0f);
-    	// -dEz/dy
-	partialY(simSpaceX.d_hField, simSpaceZ.d_eField, -1.0f);
-
-	//Hy(t+1) = Hy(t)+ (dEz/dx - dEx/dz)
-    	// dEz/dx
-	partialX(simSpaceY.d_hField, simSpaceZ.d_eField, 1.0f);
-    	// -dEx/dz
-	partialZ(simSpaceY.d_hField, simSpaceX.d_eField, -1.0f);
-
-	//Hz(t+1) = Hz(t)+ (dEx/dy - dEy/dx)
-    	// dEx/dy
-	partialY(simSpaceZ.d_hField, simSpaceX.d_eField, 1.0f);
-    	// -dEy/dx
-	partialX(simSpaceZ.d_hField, simSpaceY.d_eField, -1.0f);
+	curlAccum(&simSpace.hField, &simSpace.eField, -1.0f, simSpace.size);
 }
 
 
@@ -695,14 +692,44 @@ __global__ void arraySet(int n, T* ptr, T val)
 		ptr[i] = val;
 }
 
+static int VectorField_Zero(struct vector_field* field, dim3 size)
+{
+	int retval = 0;
+	int bytes = size.x * size.y * size.z * sizeof(float);
+	retval += checkCuda( cudaMemset(field->d_x, 0, bytes) );
+	retval += checkCuda( cudaMemset(field->d_y, 0, bytes) );
+	retval += checkCuda( cudaMemset(field->d_z, 0, bytes) );
+	return(retval);
+}
+
+static int VectorField_Free(struct vector_field* field)
+{
+	int retval = 0;
+	retval += checkCuda( cudaFree(field->d_x) );
+	retval += checkCuda( cudaFree(field->d_y) );
+	retval += checkCuda( cudaFree(field->d_z) );
+	return(retval);
+}
+
+static int VectorField_Malloc(struct vector_field* field, dim3 size)
+{
+	int retval = 0;
+	int bytes = size.x * size.y * size.z * sizeof(float);
+	retval += checkCuda( cudaMalloc((void**)&field->d_x, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&field->d_y, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&field->d_z, bytes) );
+
+	return(retval);
+}
 
 extern int SimulationSpace_Reset( struct simulation_space* pSpace)
 {
 	int retval = 0;
-	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.x * sizeof(float);
-	retval += checkCuda( cudaMemset(pSpace->d_eField, 0, bytes) );
-	retval += checkCuda( cudaMemset(pSpace->d_dField, 0, bytes) );
-	retval += checkCuda( cudaMemset(pSpace->d_hField, 0, bytes) );
+	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
+	retval += VectorField_Zero(&pSpace->eField, pSpace->size );
+	retval += VectorField_Zero(&pSpace->dField, pSpace->size );
+	retval += VectorField_Zero(&pSpace->hField, pSpace->size );
+
 	retval += checkCuda( cudaMemset(pSpace->d_i, 0, bytes) );
 
 	int blockSize = 256;
@@ -717,9 +744,7 @@ extern int SimulationSpace_Reset( struct simulation_space* pSpace)
 extern int SimulationSpace_ResetFields(void)
 {
 	int retval = 0;
-	retval += SimulationSpace_Reset(&simSpaceX);
-	retval += SimulationSpace_Reset(&simSpaceY);
-	retval += SimulationSpace_Reset(&simSpaceZ);
+	retval += SimulationSpace_Reset(&simSpace);
 	return(retval);
 }
 
@@ -732,10 +757,10 @@ extern int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	pSpace->size.x = sim_size->x;
 	pSpace->size.y = sim_size->y;
 	pSpace->size.z = sim_size->z;
-	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.x * sizeof(float);
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_dField, bytes) );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_eField, bytes) );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_hField, bytes) );
+	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
+	retval += VectorField_Malloc(&pSpace->dField, pSpace->size);
+	retval += VectorField_Malloc(&pSpace->eField, pSpace->size);
+	retval += VectorField_Malloc(&pSpace->hField, pSpace->size);
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_i, bytes) );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes) );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes) );
@@ -747,9 +772,9 @@ extern int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 extern int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 {
 	int retval = 0;
-	retval += checkCuda( cudaFree(pSpace->d_dField) );
-	retval += checkCuda( cudaFree(pSpace->d_eField) );
-	retval += checkCuda( cudaFree(pSpace->d_hField) );
+	retval += VectorField_Free(&pSpace->dField);
+	retval += VectorField_Free(&pSpace->eField);
+	retval += VectorField_Free(&pSpace->hField);
 	retval += checkCuda( cudaFree(pSpace->d_i) );
 	retval += checkCuda( cudaFree(pSpace->d_ga) );
 	retval += checkCuda( cudaFree(pSpace->d_gb) );
@@ -767,9 +792,7 @@ extern int SimulationSpace_Create(dim3* sim_size)
 
 	cpuWorkingSpace = (float*)malloc(bytes);
 printf("%s allocating %d(kB) (%d, %d, %d)\n",__FUNCTION__, 6*3*bytes/1024, sim_size->x,sim_size->y,sim_size->z);
-	retval += SimulationSpace_CreateDim(sim_size, &simSpaceX);
-	retval += SimulationSpace_CreateDim(sim_size, &simSpaceY);
-	retval += SimulationSpace_CreateDim(sim_size, &simSpaceZ);
+	retval += SimulationSpace_CreateDim(sim_size, &simSpace);
 printf("spaces allocated, initializing\n");
 	retval += SimulationSpace_ResetFields();
 printf("initialized\n");
@@ -781,9 +804,7 @@ printf("initialized\n");
 extern int SimulationSpace_Destroy(void)
 {
 	int retval = 0;
-	retval += SimulationSpace_DestroyDim(&simSpaceX);
-	retval += SimulationSpace_DestroyDim(&simSpaceY);
-	retval += SimulationSpace_DestroyDim(&simSpaceZ);
+	retval += SimulationSpace_DestroyDim(&simSpace);
 
 	free(cpuWorkingSpace);
 
