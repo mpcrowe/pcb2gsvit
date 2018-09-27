@@ -598,6 +598,94 @@ struct simulation_space simSpaceY;	// y component fields
 struct simulation_space simSpaceZ;	// z component fields
 float* cpuWorkingSpace;		// this is a space the same size as the volume as we work with in the GPU, use it as a temporary work space
 
+static void partialX(float* dest, float* src, float scale)
+{
+	int size_x = simSpaceX.size.x;
+	int size_y = simSpaceX.size.y;
+	int size_z = simSpaceX.size.z;
+
+	dim3 nBlocks_x  = dim3(size_y / sPencils, size_z, 1);
+	dim3 nThreads_x = dim3(size_x, sPencils, 1);
+
+	setDerivativeParametersX(size_x, scale);
+	derivativeAccumX<<<nBlocks_x,nThreads_x,0x2000>>>(dest,src);
+}
+
+
+static void partialY(float* dest, float* src, float scale)
+{
+	int size_x = simSpaceX.size.x;
+	int size_y = simSpaceX.size.y;
+	int size_z = simSpaceX.size.z;
+
+	dim3 nBlocks_y = dim3(size_x / sPencils, size_z, 1);
+        dim3 nThreads_y = dim3(sPencils, size_y, 1);
+
+	setDerivativeParametersY(size_y, scale);
+	derivativeAccumY<<<nBlocks_y,nThreads_y,0x2000>>>(dest,src);
+}
+
+
+static void partialZ(float* dest, float* src, float scale)
+{
+	int size_x = simSpaceX.size.x;
+	int size_y = simSpaceX.size.y;
+	int size_z = simSpaceX.size.z;
+
+        dim3 nBlocks_z  = dim3(size_x / sPencils, size_y, 1);
+        dim3 nThreads_z = dim3(sPencils, size_z, 1);
+
+	setDerivativeParametersZ(size_z, scale);
+	derivativeAccumZ<<<nBlocks_z,nThreads_z,0x2000>>>(dest,src);
+}
+
+
+// D(t+1) = D(t) + curl(H)
+void fluxDensityTimeStep(void)
+{
+	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
+    	// dHz/dy
+	partialY(simSpaceX.d_dField,simSpaceZ.d_hField, 1.0f);
+    	// -dHy/dz
+	partialZ(simSpaceX.d_dField,simSpaceY.d_hField, -1.0f);
+
+	//Dy(t+1) = Dy(t)+ (dHx/dz - dHz/dx)
+    	// dHx/dz
+	partialZ(simSpaceY.d_dField,simSpaceX.d_hField, 1.0f);
+    	// -dHz/dx
+	partialX(simSpaceY.d_dField,simSpaceZ.d_hField, -1.0f);
+
+	//Dz(t+1) = Dz(t)+ (dHy/dx - dHx/dy)
+    	// dHy/dx
+	partialX(simSpaceZ.d_dField,simSpaceY.d_hField, 1.0f);
+    	// -dHx/dy
+	partialY(simSpaceZ.d_dField,simSpaceX.d_hField, -1.0f);
+}
+
+
+// H(t+1) = H(t) - curl(E)
+void magneticFieldTimeStep(void)
+{
+	//Hx(t+1) = Hx(t)+ (dEy/dz - dEz/dy)
+    	// dEy/dz
+	partialZ(simSpaceX.d_hField, simSpaceY.d_eField, 1.0f);
+    	// -dEz/dy
+	partialY(simSpaceX.d_hField, simSpaceZ.d_eField, -1.0f);
+
+	//Hy(t+1) = Hy(t)+ (dEz/dx - dEx/dz)
+    	// dEz/dx
+	partialX(simSpaceY.d_hField, simSpaceZ.d_eField, 1.0f);
+    	// -dEx/dz
+	partialZ(simSpaceY.d_hField, simSpaceX.d_eField, -1.0f);
+
+	//Hz(t+1) = Hz(t)+ (dEx/dy - dEy/dx)
+    	// dEx/dy
+	partialY(simSpaceZ.d_hField, simSpaceX.d_eField, 1.0f);
+    	// -dEy/dx
+	partialX(simSpaceZ.d_hField, simSpaceY.d_eField, -1.0f);
+}
+
+
 template <typename T>
 __global__ void arraySet(int n, T* ptr, T val)
 {
