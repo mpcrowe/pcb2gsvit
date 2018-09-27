@@ -44,12 +44,13 @@ extern "C" {
 
 // Convenience function for checking CUDA runtime API results
 // can be wrapped around any runtime API call. No-op in release builds.
-inline cudaError_t checkCuda(cudaError_t result)
+inline cudaError_t checkCuda(cudaError_t result, int lineNum)
 {
 #if defined(DEBUG) || defined(_DEBUG)
 	if (result != cudaSuccess)
 	{
-		fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
+		fprintf(stderr, "CUDA Runtime Error: %s at line %d\n",
+cudaGetErrorString(result), lineNum);
 		assert(result == cudaSuccess);
 	}
 #endif
@@ -90,18 +91,18 @@ static int setDerivativeParametersX(int voxels, float scale)
 	float bx = -1.f / 5.f   * dsinv;
 	float cx =  4.f / 105.f * dsinv;
 	float dx = -1.f / 280.f * dsinv;
-	checkCuda( cudaMemcpyToSymbol(c_ax, &ax, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_ax, &ax, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__ );
+	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
 	ax = -ax;
 	bx = -bx;
 	cx =  -cx;
 	dx = -dx;
-	checkCuda( cudaMemcpyToSymbol(c_axn, &ax, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_bxn, &bx, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_cxn, &cx, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_dxn, &dx, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_axn, &ax, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_bxn, &bx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cxn, &cx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dxn, &dx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
 
 	float coef_x[9];
 	coef_x[0] = (1.f  / 280.f) * dsinv;	// -dx
@@ -113,9 +114,9 @@ static int setDerivativeParametersX(int voxels, float scale)
 	coef_x[6] = (-1.f / 5.f)   * dsinv;	// bx
 	coef_x[7] = (4.f  / 105.f) * dsinv;	// cx
 	coef_x[8] = (-1.f / 280.f) * dsinv;	// dx
-	checkCuda( cudaMemcpyToSymbol(c_coef_x, coef_x, 9* sizeof(float)) );
+	checkCuda( cudaMemcpyToSymbol(c_coef_x, coef_x, 9* sizeof(float)), __LINE__  );
 
-	checkCuda( cudaMemcpyToSymbol(c_mx, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_mx, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice), __LINE__  );
 	return (0);
 }
 
@@ -132,13 +133,13 @@ static int setDerivativeParametersY(int voxels, float scale)
 	float by = -1.f / 5.f   * dsinv;
 	float cy =  4.f / 105.f * dsinv;
 	float dy = -1.f / 280.f * dsinv;
-	checkCuda( cudaMemcpyToSymbol(c_ay, &ay, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_by, &by, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_cy, &cy, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_dy, &dy, sizeof(float), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_ay, &ay, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_by, &by, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cy, &cy, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dy, &dy, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
 
 
-	checkCuda( cudaMemcpyToSymbol(c_my, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_my, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice), __LINE__  );
 	return (0);
 }
 
@@ -155,12 +156,13 @@ static int setDerivativeParametersZ(int voxels, float scale)
 	float bz = -1.f / 5.f   * dsinv;
 	float cz =  4.f / 105.f * dsinv;
 	float dz = -1.f / 280.f * dsinv;
-	checkCuda( cudaMemcpyToSymbol(c_az, &az, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_bz, &bz, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_cz, &cz, sizeof(float), 0, cudaMemcpyHostToDevice) );
-	checkCuda( cudaMemcpyToSymbol(c_dz, &dz, sizeof(float), 0, cudaMemcpyHostToDevice) );
+printf("%s voxels: %d az:%f\n", __FUNCTION__, voxels, az);
+	checkCuda( cudaMemcpyToSymbol(c_az, &az, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_bz, &bz, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cz, &cz, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dz, &dz, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
 
-	checkCuda( cudaMemcpyToSymbol(c_mz, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice) );
+	checkCuda( cudaMemcpyToSymbol(c_mz, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice), __LINE__  );
 	return (0);
 }
 
@@ -524,15 +526,15 @@ extern "C" void runTest(int dimension)
 	int bytes = mx*my*mz * sizeof(float);
 	float *d_f, *d_df;
 
-	checkCuda( cudaMalloc((void**)&d_f, bytes) );
-	checkCuda( cudaMalloc((void**)&d_df, bytes) );
+	checkCuda( cudaMalloc((void**)&d_f, bytes), __LINE__  );
+	checkCuda( cudaMalloc((void**)&d_df, bytes), __LINE__  );
 
 	const int nReps = 20;
 	float milliseconds;
 	cudaEvent_t startEvent, stopEvent;
 
-	checkCuda( cudaEventCreate(&startEvent) );
-	checkCuda( cudaEventCreate(&stopEvent) );
+	checkCuda( cudaEventCreate(&startEvent), __LINE__  );
+	checkCuda( cudaEventCreate(&stopEvent), __LINE__  );
 
 	double error, maxError;
 
@@ -540,22 +542,22 @@ extern "C" void runTest(int dimension)
 
 	for (int fp = 0; fp < 2; fp++)
 	{
-		checkCuda( cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice) );
+		checkCuda( cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice), __LINE__  );
 
 		fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],0x2000>>>(d_f, d_df); // warm up
-		checkCuda( cudaEventRecord(startEvent, 0) );
+		checkCuda( cudaEventRecord(startEvent, 0), __LINE__  );
 		for (int i = 0; i < nReps; i++)
 		{
-			checkCuda( cudaMemset(d_df, 0, bytes) );
+			checkCuda( cudaMemset(d_df, 0, bytes), __LINE__  );
 
 			fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],0x2000>>>(d_f, d_df);
 		}
 
-		checkCuda( cudaEventRecord(stopEvent, 0) );
-		checkCuda( cudaEventSynchronize(stopEvent) );
-		checkCuda( cudaEventElapsedTime(&milliseconds, startEvent, stopEvent) );
+		checkCuda( cudaEventRecord(stopEvent, 0), __LINE__  );
+		checkCuda( cudaEventSynchronize(stopEvent), __LINE__  );
+		checkCuda( cudaEventElapsedTime(&milliseconds, startEvent, stopEvent), __LINE__  );
 
-		checkCuda( cudaMemcpy(df, d_df, bytes, cudaMemcpyDeviceToHost) );
+		checkCuda( cudaMemcpy(df, d_df, bytes, cudaMemcpyDeviceToHost), __LINE__  );
 
 		checkResults(error, maxError, sol, df);
 
@@ -567,11 +569,11 @@ extern "C" void runTest(int dimension)
 		   2.f * 1e-6 * mx * my * mz * nReps * sizeof(float) / milliseconds);
 	}
 
-	checkCuda( cudaEventDestroy(startEvent) );
-	checkCuda( cudaEventDestroy(stopEvent) );
+	checkCuda( cudaEventDestroy(startEvent), __LINE__  );
+	checkCuda( cudaEventDestroy(stopEvent), __LINE__  );
 
-	checkCuda( cudaFree(d_f) );
-	checkCuda( cudaFree(d_df) );
+	checkCuda( cudaFree(d_f), __LINE__  );
+	checkCuda( cudaFree(d_df), __LINE__  );
 
 	delete [] f;
 	delete [] df;
@@ -613,6 +615,7 @@ static void partialX(float* dest, float* src, float scale, dim3 size)
 {
 	dim3 nBlocks_x  = dim3(size.y / sPencils, size.z, 1);
 	dim3 nThreads_x = dim3(size.x, sPencils, 1);
+printf("%s\n", __FUNCTION__);
 
 	setDerivativeParametersX(size.x, scale);
 	derivativeAccumX<<<nBlocks_x,nThreads_x,0x2000>>>(dest,src);
@@ -623,6 +626,7 @@ static void partialY(float* dest, float* src, float scale, dim3 size)
 {
 	dim3 nBlocks_y = dim3(size.x / sPencils, size.z, 1);
         dim3 nThreads_y = dim3(sPencils, size.y, 1);
+printf("%s\n", __FUNCTION__);
 
 	setDerivativeParametersY(size.y, scale);
 	derivativeAccumY<<<nBlocks_y,nThreads_y,0x2000>>>(dest,src);
@@ -633,8 +637,10 @@ static void partialZ(float* dest, float* src, float scale, dim3 size)
 {
         dim3 nBlocks_z  = dim3(size.x / sPencils, size.y, 1);
         dim3 nThreads_z = dim3(sPencils, size.z, 1);
+printf("%s\n", __FUNCTION__);
 
 	setDerivativeParametersZ(size.z, scale);
+printf("%s z:%d, scale:%f\n", __FUNCTION__, size.z, scale);
 	derivativeAccumZ<<<nBlocks_z,nThreads_z,0x2000>>>(dest,src);
 }
 
@@ -643,6 +649,7 @@ static void partialZ(float* dest, float* src, float scale, dim3 size)
 // this is used to compute the flux density and the magnetic field
 static void curlAccum(struct vector_field* dest, struct vector_field* src, float scale, dim3 size)
 {
+printf("%s\n", __FUNCTION__);
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
     	// dHz/dy
 	partialY(dest->d_x, src->d_z, scale, size);
@@ -669,6 +676,7 @@ static void curlAccum(struct vector_field* dest, struct vector_field* src, float
 void fluxDensity_step(void)
 {
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
+printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.dField, &simSpace.hField, 1.0f, simSpace.size);
 }
 
@@ -679,8 +687,10 @@ void fluxDensity_step(void)
 void magneticField_step(void)
 {
 	//Hx(t+1) = Hx(t)+ (dEy/dz - dEz/dy)
+printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.hField, &simSpace.eField, -1.0f, simSpace.size);
 }
+
 
 
 template <typename T>
@@ -696,18 +706,18 @@ static int VectorField_Zero(struct vector_field* field, dim3 size)
 {
 	int retval = 0;
 	int bytes = size.x * size.y * size.z * sizeof(float);
-	retval += checkCuda( cudaMemset(field->d_x, 0, bytes) );
-	retval += checkCuda( cudaMemset(field->d_y, 0, bytes) );
-	retval += checkCuda( cudaMemset(field->d_z, 0, bytes) );
+	retval += checkCuda( cudaMemset(field->d_x, 0, bytes), __LINE__  );
+	retval += checkCuda( cudaMemset(field->d_y, 0, bytes), __LINE__  );
+	retval += checkCuda( cudaMemset(field->d_z, 0, bytes), __LINE__  );
 	return(retval);
 }
 
 static int VectorField_Free(struct vector_field* field)
 {
 	int retval = 0;
-	retval += checkCuda( cudaFree(field->d_x) );
-	retval += checkCuda( cudaFree(field->d_y) );
-	retval += checkCuda( cudaFree(field->d_z) );
+	retval += checkCuda( cudaFree(field->d_x), __LINE__  );
+	retval += checkCuda( cudaFree(field->d_y), __LINE__  );
+	retval += checkCuda( cudaFree(field->d_z), __LINE__  );
 	return(retval);
 }
 
@@ -715,14 +725,14 @@ static int VectorField_Malloc(struct vector_field* field, dim3 size)
 {
 	int retval = 0;
 	int bytes = size.x * size.y * size.z * sizeof(float);
-	retval += checkCuda( cudaMalloc((void**)&field->d_x, bytes) );
-	retval += checkCuda( cudaMalloc((void**)&field->d_y, bytes) );
-	retval += checkCuda( cudaMalloc((void**)&field->d_z, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&field->d_x, bytes), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&field->d_y, bytes), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&field->d_z, bytes), __LINE__  );
 
 	return(retval);
 }
 
-extern int SimulationSpace_Reset( struct simulation_space* pSpace)
+static int SimulationSpace_Reset( struct simulation_space* pSpace)
 {
 	int retval = 0;
 	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
@@ -730,13 +740,13 @@ extern int SimulationSpace_Reset( struct simulation_space* pSpace)
 	retval += VectorField_Zero(&pSpace->dField, pSpace->size );
 	retval += VectorField_Zero(&pSpace->hField, pSpace->size );
 
-	retval += checkCuda( cudaMemset(pSpace->d_i, 0, bytes) );
+	retval += checkCuda( cudaMemset(pSpace->d_i, 0, bytes), __LINE__  );
 
 	int blockSize = 256;
 	int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
 	arraySet<<<numBlocks, blockSize>>>(bytes/sizeof(float), pSpace->d_ga, (float)1.0);
 
-	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, bytes) );
+	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, bytes), __LINE__  );
 	return(retval);
 }
 
@@ -751,7 +761,7 @@ extern int SimulationSpace_ResetFields(void)
 
 // allocates storage on the GPU to store the simulation state information,
 // based on the size of the supplied geometry
-extern int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pSpace)
+static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pSpace)
 {
 	int retval = 0;
 	pSpace->size.x = sim_size->x;
@@ -761,27 +771,33 @@ extern int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	retval += VectorField_Malloc(&pSpace->dField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->eField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->hField, pSpace->size);
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_i, bytes) );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes) );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes) );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_i, bytes), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes), __LINE__  );
 
 	return(retval);
 }
 
 
-extern int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
+static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 {
 	int retval = 0;
 	retval += VectorField_Free(&pSpace->dField);
 	retval += VectorField_Free(&pSpace->eField);
 	retval += VectorField_Free(&pSpace->hField);
-	retval += checkCuda( cudaFree(pSpace->d_i) );
-	retval += checkCuda( cudaFree(pSpace->d_ga) );
-	retval += checkCuda( cudaFree(pSpace->d_gb) );
+	retval += checkCuda( cudaFree(pSpace->d_i), __LINE__  );
+	retval += checkCuda( cudaFree(pSpace->d_ga), __LINE__  );
+	retval += checkCuda( cudaFree(pSpace->d_gb), __LINE__  );
 	return(retval);
 }
 
 
+extern void SimulationSpace_Timestep(void)
+{
+printf("%s\n", __FUNCTION__);
+	fluxDensity_step();
+	magneticField_step();
+}
 
 // allocates storage on the GPU to store the simulation state information,
 // based on the size of the supplied geometry

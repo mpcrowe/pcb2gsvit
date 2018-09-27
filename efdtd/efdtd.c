@@ -271,6 +271,7 @@ int main(int argc, char* argv[])
 	setDerivativeParameters(); // initialize 
 	dim3 size = {100,100,100};
 	SimulationSpace_Create(&size);
+	SimulationSpace_Timestep();
 
 	SimulationSpace_Destroy();
 

@@ -7,3 +7,4 @@ void setDerivativeParameters();
 void runTest(int dimension);
 extern int SimulationSpace_Create(dim3* sim_size);
 extern int SimulationSpace_Destroy(void);
+extern void SimulationSpace_Timestep(void);
