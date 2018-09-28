@@ -1,31 +1,3 @@
-/* Copyright (c) 1993-2015, NVIDIA CORPORATION. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-*  * Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-*  * Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*  * Neither the name of NVIDIA CORPORATION nor the names of its
-*    contributors may be used to endorse or promote products derived
-*    from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
-* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-* PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-* OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-
 /* 
 *based on 
 * Mark Harris March 2013 "Finite Difference Methods in CUDA C/C++, Part 1"
@@ -33,15 +5,13 @@
 *https://devblogs.nvidia.com/finite-difference-methods-cuda-cc-part-1
 */
 
-
-
 #include <stdio.h>
 #include <assert.h>
 extern "C" {
 #include "finite-difference.h"
 }
-#define DEBUG 1
 
+#define DEBUG 1
 // Convenience function for checking CUDA runtime API results
 // can be wrapped around any runtime API call. No-op in release builds.
 inline cudaError_t checkCuda(cudaError_t result, int lineNum)
@@ -49,29 +19,27 @@ inline cudaError_t checkCuda(cudaError_t result, int lineNum)
 #if defined(DEBUG) || defined(_DEBUG)
 	if (result != cudaSuccess)
 	{
-		fprintf(stderr, "CUDA Runtime Error: %s at line %d\n",
-cudaGetErrorString(result), lineNum);
-		assert(result == cudaSuccess);
+		fprintf(stderr, "CUDA Runtime Error: (%s) %d at line %d\n", cudaGetErrorString(result), result, lineNum);
+	//	assert(result == cudaSuccess);
+		exit(-1);
 	}
 #endif
 	return result;
 }
 
+#define SHARED_SIZE 0x4000
 float fx = 6.0f, fy = 1.0f, fz = 1.0f;
 const int mx = 256, my = 256, mz = 256;
 __constant__ int c_mx, c_my, c_mz;
 
 // shared memory tiles will be m*-by-*Pencils
 // sPencils is used when each thread calculates the derivative at one point
-// lPencils is used for coalescing in y and z where each thread has to
-//     calculate the derivative at mutiple points
 const int sPencils = 4;  // small # pencils
 
 dim3 numBlocks[3][2], threadsPerBlock[3][2];
 
 // stencil coefficients
 __constant__ float c_ax, c_bx, c_cx, c_dx;
-__constant__ float c_axn, c_bxn, c_cxn, c_dxn;
 __constant__ float c_ay, c_by, c_cy, c_dy;
 __constant__ float c_az, c_bz, c_cz, c_dz;
 
@@ -91,18 +59,10 @@ static int setDerivativeParametersX(int voxels, float scale)
 	float bx = -1.f / 5.f   * dsinv;
 	float cx =  4.f / 105.f * dsinv;
 	float dx = -1.f / 280.f * dsinv;
-	checkCuda( cudaMemcpyToSymbol(c_ax, &ax, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__ );
-	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	ax = -ax;
-	bx = -bx;
-	cx =  -cx;
-	dx = -dx;
-	checkCuda( cudaMemcpyToSymbol(c_axn, &ax, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_bxn, &bx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_cxn, &cx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_dxn, &dx, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_ax, &ax, sizeof(float)), __LINE__ );
+	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float)), __LINE__  );
 
 	float coef_x[9];
 	coef_x[0] = (1.f  / 280.f) * dsinv;	// -dx
@@ -116,9 +76,9 @@ static int setDerivativeParametersX(int voxels, float scale)
 	coef_x[8] = (-1.f / 280.f) * dsinv;	// dx
 	checkCuda( cudaMemcpyToSymbol(c_coef_x, coef_x, 9* sizeof(float)), __LINE__  );
 
-	checkCuda( cudaMemcpyToSymbol(c_mx, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice), __LINE__  );
 	return (0);
 }
+
 
 static int setDerivativeParametersY(int voxels, float scale)
 {
@@ -133,15 +93,15 @@ static int setDerivativeParametersY(int voxels, float scale)
 	float by = -1.f / 5.f   * dsinv;
 	float cy =  4.f / 105.f * dsinv;
 	float dy = -1.f / 280.f * dsinv;
-	checkCuda( cudaMemcpyToSymbol(c_ay, &ay, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_by, &by, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_cy, &cy, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_dy, &dy, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_ay, &ay, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_by, &by, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cy, &cy, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dy, &dy, sizeof(float)), __LINE__  );
 
 
-	checkCuda( cudaMemcpyToSymbol(c_my, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice), __LINE__  );
 	return (0);
 }
+
 
 static int setDerivativeParametersZ(int voxels, float scale)
 {
@@ -156,15 +116,14 @@ static int setDerivativeParametersZ(int voxels, float scale)
 	float bz = -1.f / 5.f   * dsinv;
 	float cz =  4.f / 105.f * dsinv;
 	float dz = -1.f / 280.f * dsinv;
-printf("%s voxels: %d az:%f\n", __FUNCTION__, voxels, az);
-	checkCuda( cudaMemcpyToSymbol(c_az, &az, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_bz, &bz, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_cz, &cz, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_dz, &dz, sizeof(float), 0, cudaMemcpyHostToDevice), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_az, &az,sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_bz, &bz, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_cz, &cz, sizeof(float)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_dz, &dz, sizeof(float)), __LINE__  );
 
-	checkCuda( cudaMemcpyToSymbol(c_mz, &voxels, sizeof(int), 0, cudaMemcpyHostToDevice), __LINE__  );
 	return (0);
 }
+
 
 // host routine to set constant data
 extern "C" void setDerivativeParameters()
@@ -291,7 +250,7 @@ __global__ void derivativeAccumX(float *f, float *df)
 	int si = i + 4;       // local i for shared memory access + halo offset
 	int sj = (c_mx+8)*threadIdx.y; // local j for shared memory access
 
-	int globalIdx = k * c_mx * my + j * c_mx + i;
+	int globalIdx = k * c_mx * c_my + j * c_mx + i;
 
 	s_f[sj+si] = f[globalIdx];
 
@@ -324,7 +283,7 @@ __global__ void derivative_x_fir(float *f, float *df)
 	int si = i + 4;       // local i for shared memory access + halo offset
 	int sj = (c_mx+8)*threadIdx.y; // local j for shared memory access
 
-	int globalIdx = k * c_mx * my + j * c_mx + i;
+	int globalIdx = k * c_mx * c_my + j * c_mx + i;
 
 	s_f[sj+si] = f[globalIdx];
 
@@ -461,7 +420,7 @@ __global__ void derivativeAccumZ(float *f, float *df)
 	int si = threadIdx.x;
 	int sk = k + 4; // halo offset
 
-	int globalIdx = k * mx * my + j * mx + i;
+	int globalIdx = k * c_mx * c_my + j * c_mx + i;
 
 	s_f[(sPencils)*sk+si] = f[globalIdx];
 
@@ -469,8 +428,8 @@ __global__ void derivativeAccumZ(float *f, float *df)
 
 	if (k < 4)
 	{
-		s_f[(sPencils)*(sk-4)+si]  = s_f[(sPencils)*(sk+mz-5)+si];
-		s_f[(sPencils)*(sk+mz)+si] = s_f[(sPencils)*(sk+1)+si];
+		s_f[(sPencils)*(sk-4)+si]  = s_f[(sPencils)*(sk+c_mz-5)+si];
+		s_f[(sPencils)*(sk+c_mz)+si] = s_f[(sPencils)*(sk+1)+si];
 	}
 
 	__syncthreads();
@@ -544,13 +503,13 @@ extern "C" void runTest(int dimension)
 	{
 		checkCuda( cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice), __LINE__  );
 
-		fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],0x2000>>>(d_f, d_df); // warm up
+		fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],SHARED_SIZE>>>(d_f, d_df); // warm up
 		checkCuda( cudaEventRecord(startEvent, 0), __LINE__  );
 		for (int i = 0; i < nReps; i++)
 		{
 			checkCuda( cudaMemset(d_df, 0, bytes), __LINE__  );
 
-			fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],0x2000>>>(d_f, d_df);
+			fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],SHARED_SIZE>>>(d_f, d_df);
 		}
 
 		checkCuda( cudaEventRecord(stopEvent, 0), __LINE__  );
@@ -615,10 +574,9 @@ static void partialX(float* dest, float* src, float scale, dim3 size)
 {
 	dim3 nBlocks_x  = dim3(size.y / sPencils, size.z, 1);
 	dim3 nThreads_x = dim3(size.x, sPencils, 1);
-printf("%s\n", __FUNCTION__);
 
 	setDerivativeParametersX(size.x, scale);
-	derivativeAccumX<<<nBlocks_x,nThreads_x,0x2000>>>(dest,src);
+	derivativeAccumX<<<nBlocks_x,nThreads_x,SHARED_SIZE>>>(dest,src);
 }
 
 
@@ -626,10 +584,9 @@ static void partialY(float* dest, float* src, float scale, dim3 size)
 {
 	dim3 nBlocks_y = dim3(size.x / sPencils, size.z, 1);
         dim3 nThreads_y = dim3(sPencils, size.y, 1);
-printf("%s\n", __FUNCTION__);
 
 	setDerivativeParametersY(size.y, scale);
-	derivativeAccumY<<<nBlocks_y,nThreads_y,0x2000>>>(dest,src);
+	derivativeAccumY<<<nBlocks_y,nThreads_y,SHARED_SIZE>>>(dest,src);
 }
 
 
@@ -637,11 +594,9 @@ static void partialZ(float* dest, float* src, float scale, dim3 size)
 {
         dim3 nBlocks_z  = dim3(size.x / sPencils, size.y, 1);
         dim3 nThreads_z = dim3(sPencils, size.z, 1);
-printf("%s\n", __FUNCTION__);
 
 	setDerivativeParametersZ(size.z, scale);
-printf("%s z:%d, scale:%f\n", __FUNCTION__, size.z, scale);
-	derivativeAccumZ<<<nBlocks_z,nThreads_z,0x2000>>>(dest,src);
+	derivativeAccumZ<<<nBlocks_z,nThreads_z,SHARED_SIZE>>>(dest,src);
 }
 
 
@@ -655,18 +610,22 @@ printf("%s\n", __FUNCTION__);
 	partialY(dest->d_x, src->d_z, scale, size);
     	// -dHy/dz
 	partialZ(dest->d_x, src->d_y, -scale, size);
+	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
 	//Dy(t+1) = Dy(t)+ (dHx/dz - dHz/dx)
     	// dHx/dz
 	partialZ(dest->d_y, src->d_x, scale, size);
     	// -dHz/dx
 	partialX(dest->d_y, src->d_z, -scale, size);
+	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
 	//Dz(t+1) = Dz(t)+ (dHy/dx - dHx/dy)
     	// dHy/dx
 	partialX(dest->d_z, src->d_y, scale, size);
     	// -dHx/dy
 	partialY(dest->d_z, src->d_x, -scale, size);
+	checkCuda(cudaDeviceSynchronize(), __LINE__);
+
 }
 
 
@@ -767,10 +726,15 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	pSpace->size.x = sim_size->x;
 	pSpace->size.y = sim_size->y;
 	pSpace->size.z = sim_size->z;
-	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
+	retval += checkCuda( cudaMemcpyToSymbol(c_mx, &sim_size->x, sizeof(int)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_my, &sim_size->y, sizeof(int)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_mz, &sim_size->z, sizeof(int)), __LINE__  );
+
 	retval += VectorField_Malloc(&pSpace->dField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->eField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->hField, pSpace->size);
+
+	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_i, bytes), __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes), __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes), __LINE__  );
