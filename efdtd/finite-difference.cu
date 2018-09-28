@@ -131,6 +131,9 @@ extern "C" void setDerivativeParameters()
 	setDerivativeParametersX(mx, 1.0);
 	setDerivativeParametersY(my, 1.0);
 	setDerivativeParametersZ(mz, 1.0);
+	checkCuda( cudaMemcpyToSymbol(c_mx, &mx, sizeof(int)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_my, &my, sizeof(int)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_mz, &mz, sizeof(int)), __LINE__  );
 
 	// Execution configurations for small pencil tiles
 

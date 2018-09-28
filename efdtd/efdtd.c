@@ -274,6 +274,7 @@ int main(int argc, char* argv[])
 	SimulationSpace_Timestep();
 
 	SimulationSpace_Destroy();
+	setDerivativeParameters(); // initialize 
 
 	runTest(0); // x derivative
 	runTest(1); // y derivative
