@@ -563,7 +563,7 @@ struct simulation_space
 	struct vector_field dField;	// electric flux density, see Sullivan P.32 chapter 2.1
 	struct vector_field eField;	// the electrical field
 	struct vector_field hField;	// the magnetic field
-	float* d_i;		// a parameter that stores a current (efield* conductivity) like parameter
+	struct vector_field iField;	// a parameter that stores a current (efield* conductivity) like parameter
 	float* d_ga;		// relative permittivity (with some time varying things)
 	float* d_gb;		// the conductivity (some time varient 	stuff)
 };
@@ -653,7 +653,15 @@ printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.hField, &simSpace.eField, -1.0f, simSpace.size);
 }
 
+static void eFieldDir_step(float* d_e, float* d_d, float* d_i)
+{
+	// e = gax * (d -i - del_exp* s)
+}
 
+static void electricField_step(void)
+{
+	simSpace.eField.d_x, simSpace.dField.d_y, simSpace.iField,d_y 
+}
 
 template <typename T>
 __global__ void arraySet(int n, T* ptr, T val)
@@ -663,6 +671,7 @@ __global__ void arraySet(int n, T* ptr, T val)
 	for (int i = index; i < n; i += stride)
 		ptr[i] = val;
 }
+
 
 static int VectorField_Zero(struct vector_field* field, dim3 size)
 {
@@ -674,6 +683,7 @@ static int VectorField_Zero(struct vector_field* field, dim3 size)
 	return(retval);
 }
 
+
 static int VectorField_Free(struct vector_field* field)
 {
 	int retval = 0;
@@ -682,6 +692,7 @@ static int VectorField_Free(struct vector_field* field)
 	retval += checkCuda( cudaFree(field->d_z), __LINE__  );
 	return(retval);
 }
+
 
 static int VectorField_Malloc(struct vector_field* field, dim3 size)
 {
@@ -694,6 +705,7 @@ static int VectorField_Malloc(struct vector_field* field, dim3 size)
 	return(retval);
 }
 
+
 static int SimulationSpace_Reset( struct simulation_space* pSpace)
 {
 	int retval = 0;
@@ -702,7 +714,8 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 	retval += VectorField_Zero(&pSpace->dField, pSpace->size );
 	retval += VectorField_Zero(&pSpace->hField, pSpace->size );
 
-	retval += checkCuda( cudaMemset(pSpace->d_i, 0, bytes), __LINE__  );
+	retval += VectorField_Zero(&pSpace->iField, pSpace->size );
+
 
 	int blockSize = 256;
 	int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
@@ -711,6 +724,7 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, bytes), __LINE__  );
 	return(retval);
 }
+
 
 // initialze simulation space to all zeros
 extern int SimulationSpace_ResetFields(void)
@@ -736,9 +750,9 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	retval += VectorField_Malloc(&pSpace->dField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->eField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->hField, pSpace->size);
+	retval += VectorField_Malloc(&pSpace->iField, pSpace->size);
 
 	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_i, bytes), __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes), __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes), __LINE__  );
 
@@ -752,7 +766,7 @@ static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 	retval += VectorField_Free(&pSpace->dField);
 	retval += VectorField_Free(&pSpace->eField);
 	retval += VectorField_Free(&pSpace->hField);
-	retval += checkCuda( cudaFree(pSpace->d_i), __LINE__  );
+	retval += VectorField_Free(&pSpace->iField);
 	retval += checkCuda( cudaFree(pSpace->d_ga), __LINE__  );
 	retval += checkCuda( cudaFree(pSpace->d_gb), __LINE__  );
 	return(retval);
@@ -765,6 +779,8 @@ printf("%s\n", __FUNCTION__);
 	fluxDensity_step();
 	magneticField_step();
 }
+
+
 
 // allocates storage on the GPU to store the simulation state information,
 // based on the size of the supplied geometry
