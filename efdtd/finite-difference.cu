@@ -30,13 +30,15 @@ inline cudaError_t checkCuda(cudaError_t result, int lineNum)
 #define SHARED_SIZE 0x4000
 float fx = 6.0f, fy = 1.0f, fz = 1.0f;
 const int mx = 256, my = 256, mz = 256;
-__constant__ int c_mx, c_my, c_mz;
 
 // shared memory tiles will be m*-by-*Pencils
 // sPencils is used when each thread calculates the derivative at one point
 const int sPencils = 4;  // small # pencils
 
 dim3 numBlocks[3][2], threadsPerBlock[3][2];
+
+__constant__ int c_mx, c_my, c_mz;
+__constant__ int c_numElements;
 
 // stencil coefficients
 __constant__ float c_ax, c_bx, c_cx, c_dx;
@@ -564,6 +566,8 @@ struct simulation_space
 	struct vector_field eField;	// the electrical field
 	struct vector_field hField;	// the magnetic field
 	struct vector_field iField;	// a parameter that stores a current (efield* conductivity) like parameter
+	struct vector_field sField;	// ????
+	char* d_mat_index;	//
 	float* d_ga;		// relative permittivity (with some time varying things)
 	float* d_gb;		// the conductivity (some time varient 	stuff)
 };
@@ -653,15 +657,32 @@ printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.hField, &simSpace.eField, -1.0f, simSpace.size);
 }
 
-static void eFieldDir_step(float* d_e, float* d_d, float* d_i)
+
+template <typename T>
+__global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s, T del_exp, T* d_ga, char* d_mi )
 {
-	// e = gax * (d -i - del_exp* s)
+	// e = ga * (d -i - del_exp* s)
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	int stride = blockDim.x * gridDim.x;
+	for(int i = index; i < c_numElements; i += stride)
+	{
+		int materialIndex = d_mi[i];
+		T ga = d_ga[materialIndex];
+		d_e[i] = ga*(d_d[i] - d_i[i] - del_exp * d_s[i]) ;
+	}
 }
+
 
 static void electricField_step(void)
 {
-	simSpace.eField.d_x, simSpace.dField.d_y, simSpace.iField,d_y 
+	int bytes = simSpace.size.x * simSpace.size.y * simSpace.size.z * sizeof(float);
+        int blockSize = 256;
+        int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
+       	eFieldDir_step<<<numBlocks, blockSize>>>( 
+		simSpace.eField.d_x, simSpace.dField.d_x, simSpace.iField.d_x,simSpace.sField.d_x,
+		(float)7.0, simSpace.d_ga, simSpace.d_mat_index );
 }
+
 
 template <typename T>
 __global__ void arraySet(int n, T* ptr, T val)
@@ -715,6 +736,7 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 	retval += VectorField_Zero(&pSpace->hField, pSpace->size );
 
 	retval += VectorField_Zero(&pSpace->iField, pSpace->size );
+	retval += VectorField_Zero(&pSpace->sField, pSpace->size );
 
 
 	int blockSize = 256;
@@ -743,14 +765,17 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	pSpace->size.x = sim_size->x;
 	pSpace->size.y = sim_size->y;
 	pSpace->size.z = sim_size->z;
+	int numE = pSpace->size.x * pSpace->size.y * pSpace->size.z;
 	retval += checkCuda( cudaMemcpyToSymbol(c_mx, &sim_size->x, sizeof(int)), __LINE__  );
 	retval += checkCuda( cudaMemcpyToSymbol(c_my, &sim_size->y, sizeof(int)), __LINE__  );
 	retval += checkCuda( cudaMemcpyToSymbol(c_mz, &sim_size->z, sizeof(int)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_numElements, &numE, sizeof(int)), __LINE__  );
 
 	retval += VectorField_Malloc(&pSpace->dField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->eField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->hField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->iField, pSpace->size);
+	retval += VectorField_Malloc(&pSpace->sField, pSpace->size);
 
 	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes), __LINE__  );
@@ -767,6 +792,7 @@ static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 	retval += VectorField_Free(&pSpace->eField);
 	retval += VectorField_Free(&pSpace->hField);
 	retval += VectorField_Free(&pSpace->iField);
+	retval += VectorField_Free(&pSpace->sField);
 	retval += checkCuda( cudaFree(pSpace->d_ga), __LINE__  );
 	retval += checkCuda( cudaFree(pSpace->d_gb), __LINE__  );
 	return(retval);
@@ -777,6 +803,7 @@ extern void SimulationSpace_Timestep(void)
 {
 printf("%s\n", __FUNCTION__);
 	fluxDensity_step();
+	electricField_step();
 	magneticField_step();
 }
 
