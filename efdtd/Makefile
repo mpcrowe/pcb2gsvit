@@ -54,7 +54,7 @@ test: $(PROJECT)
 #	doxygen Doxyfile
 
 clean:
-	rm -rf $(PROJECT)$(OS_EXTENSION) $(PROJECT2)$(OS_EXTENSION) *~ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) doc
+	rm -rf $(PROJECT)$(OS_EXTENSION) $(PROJECT2)$(OS_EXTENSION) *~ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) doc  testbed trackball.o
 
 $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS) $(NVCC_OBJ)
 	@echo linking
@@ -68,6 +68,8 @@ $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS) $(NVCC_OBJ)
 	@echo compiling $< with NVCC
 	@$(NVCC) -o $@ -c $< $(NVCCFLAGS)
 
+testbed: testbed.c trackball.o
+	@$(CC) $< -o $@ -lGLU -lGL -lXmu -lXi -lXext -lX11 -lm -lglut trackball.o
 
 install: all
 	$(INSTALL) $(PROJECT2) $(bindir)/$(PROJECT2)
