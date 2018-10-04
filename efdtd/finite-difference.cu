@@ -30,13 +30,18 @@ inline cudaError_t checkCuda(cudaError_t result, int lineNum)
 #define SHARED_SIZE 0x4000
 float fx = 6.0f, fy = 1.0f, fz = 1.0f;
 const int mx = 256, my = 256, mz = 256;
-__constant__ int c_mx, c_my, c_mz;
 
 // shared memory tiles will be m*-by-*Pencils
 // sPencils is used when each thread calculates the derivative at one point
 const int sPencils = 4;  // small # pencils
 
 dim3 numBlocks[3][2], threadsPerBlock[3][2];
+
+__constant__ int c_mx, c_my, c_mz;
+__constant__ int c_numElements;
+__constant__ float c_delExp;  // coeff used in calculating the efield
+__constant__ float* c_ga;
+__constant__ int* c_mi;
 
 // stencil coefficients
 __constant__ float c_ax, c_bx, c_cx, c_dx;
@@ -564,6 +569,8 @@ struct simulation_space
 	struct vector_field eField;	// the electrical field
 	struct vector_field hField;	// the magnetic field
 	struct vector_field iField;	// a parameter that stores a current (efield* conductivity) like parameter
+	struct vector_field sField;	// ????
+	char* d_mat_index;	//
 	float* d_ga;		// relative permittivity (with some time varying things)
 	float* d_gb;		// the conductivity (some time varient 	stuff)
 };
@@ -653,15 +660,63 @@ printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.hField, &simSpace.eField, -1.0f, simSpace.size);
 }
 
-static void eFieldDir_step(float* d_e, float* d_d, float* d_i)
+
+template <typename T>
+__global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 {
-	// e = gax * (d -i - del_exp* s)
+	// e = ga * (d -i - del_exp* s)
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	int stride = blockDim.x * gridDim.x;
+	for(int i = index; i < c_numElements; i += stride)
+	{
+		int materialIndex = c_mi[i];
+		T ga = c_ga[materialIndex];
+//		T ga = 2.0;
+		d_e[i] = ga*(d_d[i] - d_i[i] - c_delExp * d_s[i]) ;
+	}
 }
 
-static void electricField_step(void)
+
+static int electricField_step(void)
 {
-	simSpace.eField.d_x, simSpace.dField.d_y, simSpace.iField,d_y 
+	int retval = 0;
+	int bytes = simSpace.size.x * simSpace.size.y * simSpace.size.z * sizeof(float);
+        int blockSize = 256;
+        int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
+	float del_exp = 7.0f;
+printf("%s\n", __FUNCTION__);
+
+	// fixme these remain constant through out simulation, move to a
+	// better spot in initialization
+	retval += checkCuda( cudaMemcpyToSymbol(c_delExp, &del_exp, sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_ga, &simSpace.d_ga, sizeof(float*)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_mi, &simSpace.d_mat_index, sizeof(char*)), __LINE__  );
+	if(retval)
+		return(retval);
+
+	// compute field for each axis
+
+	// Ex
+       	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_x, simSpace.dField.d_x, simSpace.iField.d_x, simSpace.sField.d_x);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+	// Ey
+       	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_y, simSpace.dField.d_y, simSpace.iField.d_y, simSpace.sField.d_y);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+	// Ez
+       	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_z, simSpace.dField.d_z, simSpace.iField.d_z, simSpace.sField.d_z);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+	return(retval);
 }
+
 
 template <typename T>
 __global__ void arraySet(int n, T* ptr, T val)
@@ -709,19 +764,21 @@ static int VectorField_Malloc(struct vector_field* field, dim3 size)
 static int SimulationSpace_Reset( struct simulation_space* pSpace)
 {
 	int retval = 0;
-	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
+	int numElmnts = pSpace->size.x * pSpace->size.y * pSpace->size.z;
 	retval += VectorField_Zero(&pSpace->eField, pSpace->size );
 	retval += VectorField_Zero(&pSpace->dField, pSpace->size );
 	retval += VectorField_Zero(&pSpace->hField, pSpace->size );
 
 	retval += VectorField_Zero(&pSpace->iField, pSpace->size );
+	retval += VectorField_Zero(&pSpace->sField, pSpace->size );
 
 
 	int blockSize = 256;
-	int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
-	arraySet<<<numBlocks, blockSize>>>(bytes/sizeof(float), pSpace->d_ga, (float)1.0);
+	int numBlocks = ((numElmnts) + blockSize - 1) / blockSize;
+	arraySet<<<numBlocks, blockSize>>>(128, pSpace->d_ga, (float)1.0);
 
-	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, bytes), __LINE__  );
+	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, 128 * sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMemset(pSpace->d_mat_index, 0, numElmnts*sizeof(char)) , __LINE__  );
 	return(retval);
 }
 
@@ -743,18 +800,21 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	pSpace->size.x = sim_size->x;
 	pSpace->size.y = sim_size->y;
 	pSpace->size.z = sim_size->z;
+	int numE = pSpace->size.x * pSpace->size.y * pSpace->size.z;
 	retval += checkCuda( cudaMemcpyToSymbol(c_mx, &sim_size->x, sizeof(int)), __LINE__  );
 	retval += checkCuda( cudaMemcpyToSymbol(c_my, &sim_size->y, sizeof(int)), __LINE__  );
 	retval += checkCuda( cudaMemcpyToSymbol(c_mz, &sim_size->z, sizeof(int)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_numElements, &numE, sizeof(int)), __LINE__  );
 
 	retval += VectorField_Malloc(&pSpace->dField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->eField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->hField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->iField, pSpace->size);
+	retval += VectorField_Malloc(&pSpace->sField, pSpace->size);
 
-	int bytes = pSpace->size.x * pSpace->size.y * pSpace->size.z * sizeof(float);
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, bytes), __LINE__  );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, bytes), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_mat_index, numE * sizeof(char))  , __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, 128 * sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, 128 * sizeof(float)), __LINE__  );
 
 	return(retval);
 }
@@ -767,6 +827,8 @@ static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 	retval += VectorField_Free(&pSpace->eField);
 	retval += VectorField_Free(&pSpace->hField);
 	retval += VectorField_Free(&pSpace->iField);
+	retval += VectorField_Free(&pSpace->sField);
+	retval += checkCuda( cudaFree(pSpace->d_mat_index), __LINE__  );
 	retval += checkCuda( cudaFree(pSpace->d_ga), __LINE__  );
 	retval += checkCuda( cudaFree(pSpace->d_gb), __LINE__  );
 	return(retval);
@@ -777,6 +839,7 @@ extern void SimulationSpace_Timestep(void)
 {
 printf("%s\n", __FUNCTION__);
 	fluxDensity_step();
+	electricField_step();
 	magneticField_step();
 }
 
