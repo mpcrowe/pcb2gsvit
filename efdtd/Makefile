@@ -9,7 +9,8 @@ PROJECT = efdtd
 #DEBUG = --debug
 CC = gcc
 #NVCC = /usr/lib/nvidia-cuda-toolkit/bin/nvcc
-NVCC = /usr/local/cuda-9.1/bin/nvcc
+#NVCC = /usr/local/cuda-9.1/bin/nvcc
+NVCC = nvcc
 NVCCFLAGS = -D_FORCE_INLINES -O2 -use_fast_math -DUCUDA -rdc=false
 NVCC_OBJ = finite-difference.o
 
