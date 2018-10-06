@@ -15,6 +15,8 @@ implied. This program is -not- in the public domain. */
 #include <GL/glut.h>
 #include "trackball.h"
 
+#include "finite-difference.h"
+
 typedef enum {
 	RESERVED, BODY_SIDE, BODY_EDGE, BODY_WHOLE, ARM_SIDE, ARM_EDGE, ARM_WHOLE,
 	LEG_SIDE, LEG_EDGE, LEG_WHOLE, EYE_SIDE, EYE_EDGE, EYE_WHOLE, DINOSAUR
@@ -23,6 +25,7 @@ typedef enum {
 GLfloat angle = -150;   /* in degrees */
 GLboolean doubleBuffer = GL_TRUE, iconic = GL_FALSE, keepAspect = GL_FALSE;
 int spinning = 0, moving = 0;
+int pleaseStop = 0;
 int beginx, beginy;
 int W = 300, H = 300;
 float curquat[4];
@@ -56,9 +59,10 @@ GLfloat lightOnePosition[] = {0.0, 0.0, 30.0, 1.0};
 GLfloat lightOneColor[] = {1.0, 1.0, 1.0, 1.0}; 
 /* *INDENT-ON* */
 
-#define MX 5
-#define MY 5
-#define MZ 5
+#define MX 50
+#define MY 50
+#define MZ 50
+#if 0
 GLfloat flatSpace[] = {
 			  0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 			  1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
@@ -90,14 +94,18 @@ GLfloat flatSpace[] = {
 			  3.4f, 3.4f, 3.4f, 3.4f, 3.4f,
 			  4.4f, 4.4f, 4.4f, 4.4f, 4.4f
 };
-
+#else
+GLfloat flatSpace[MX*MY*MZ];
+#endif
 
 void makeVolume(GLuint edge)
 {
 	int i,  j, k;
+	FD_Init3dSpaceCos(flatSpace, 2, MX, MY, MZ, 5.0f, 1.2f );
+
 	glNewList(edge, GL_COMPILE);
 //		glShadeModel(GL_FLAT);  // flat shade keeps angular hands from being * * "smoothed" 
-		glPointSize(10);
+		glPointSize(5);
 		glBegin(GL_POINTS);
 		for(i = 0; i < MX; i++)
 		{
@@ -108,11 +116,22 @@ void makeVolume(GLuint edge)
 					int index = MY*MZ*i + MZ*j + k;
 					float val = flatSpace[index];
 					GLfloat color[4];
-					color[0] = val/5.0f;
-					color[1] = (5-val)/5;
-					color[2] = 0.2;
-					color[3] = 0.2;
-					glMaterialfv(GL_FRONT, GL_DIFFUSE, color);
+					if(val >0)
+					{
+						color[0] = val/5.0f;
+						color[1] = (5-val)/5;
+						color[2] =-1.0;
+						color[3] = 0.5;
+					}
+					else
+					{
+						val = -val;
+						color[2] = val/5.0f;
+						color[1] = (val-5)/5;
+						color[0] = -1.0;
+						color[3] = 0.5;
+					}
+					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, color);
 					glVertex3f((float)(i), (float)(j), (float)(k)); // x, y, z
 				}
 			}
@@ -322,6 +341,13 @@ motion(int x, int y)
 			(2.0 * x - W) / W,
 			(H - 2.0 * y) / H
 		);
+		
+		if(pleaseStop !=0 )
+		{
+			pleaseStop = 0;
+			spinning =0;
+			moving = 0;
+		}
 		beginx = x;
 		beginy = y;
 		spinning = 1;
@@ -332,7 +358,7 @@ motion(int x, int y)
 GLboolean lightZeroSwitch = GL_TRUE, lightOneSwitch = GL_TRUE;
 
 void
-controlLights(int value)
+menuSelection(int value)
 {
 	switch (value)
 	{
@@ -369,7 +395,8 @@ controlLights(int value)
 	break;
 #endif
 	case 4:
-		glutFullScreen();
+		moving = 0;
+		pleaseStop =1;
 	break;
 	case 5:
 		exit(0);
@@ -409,7 +436,7 @@ main(int argc, char **argv)
 	// setup mouse functionality
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
-	glutCreateMenu(controlLights);
+	glutCreateMenu(menuSelection);
 	glutAddMenuEntry("Toggle right light", 1);
 	glutAddMenuEntry("Toggle left light", 2);
 	if (glutGet(GLUT_WINDOW_NUM_SAMPLES) > 0)
@@ -417,7 +444,7 @@ main(int argc, char **argv)
 		glutAddMenuEntry("Toggle multisampling", 3);
 		glutSetWindowTitle("dinospin (multisample capable)");
 	}
-	glutAddMenuEntry("Full screen", 4);
+	glutAddMenuEntry("Reset", 4);
 	glutAddMenuEntry("Quit", 5);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
@@ -429,9 +456,9 @@ main(int argc, char **argv)
 	glMatrixMode(GL_PROJECTION);
 	gluPerspective( /* field of view in degree */ 40.0,
 		/* aspect ratio */ 1.0,
-		/* Z near */ 1.0, /* Z far */ 40.0);
+		/* Z near */ 1.0, /* Z far */ (float)MZ*5.0);
 	glMatrixMode(GL_MODELVIEW);
-	gluLookAt(0.0, 0.0, 30.0,  /* eye is at (0,0,30) */
+	gluLookAt(0.0, 0.0, (float)MZ*3.0,  /* eye is at (0,0,30) */
 		0.0, 0.0, 0.0,      /* center is at (0,0,0) */
 		0.0, 1.0, 0.);      /* up is in positive Y direction */
 

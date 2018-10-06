@@ -162,26 +162,26 @@ extern "C" void setDerivativeParameters()
 }
 
 
-void initInput(float *f, int dim)
+extern void FD_Init3dSpaceCos(float* space, int dim, int dim_x, int dim_y, int dim_z, float mag, float freq)
 {
 	const float twopi = 8.f * (float)atan(1.0);
 
-	for (int k = 0; k < mz; k++)
+	for (int k = 0; k < dim_z; k++)
 	{
-		for (int j = 0; j < my; j++)
+		for (int j = 0; j < dim_y; j++)
 		{
-			for (int i = 0; i < mx; i++)
+			for (int i = 0; i < dim_x; i++)
 			{
 				switch (dim)
 				{
 				case 0:
-					f[k*mx*my+j*mx+i] = cos(fx*twopi*(i-1.f)/(mx-1.f));
+					space[k*dim_x*dim_y+j*dim_x+i] = mag * cos(freq*twopi*(i-1.f)/(dim_x-1.f));
 				break;
 				case 1:
-					f[k*mx*my+j*mx+i] = cos(fy*twopi*(j-1.f)/(my-1.f));
+					space[k*dim_x*dim_y+j*dim_x+i] = mag * cos(freq*twopi*(j-1.f)/(dim_y-1.f));
 				break;
 				case 2:
-					f[k*mx*my+j*mx+i] = cos(fz*twopi*(k-1.f)/(mz-1.f));
+					space[k*dim_x*dim_y+j*dim_x+i] = mag* cos(freq*twopi*(k-1.f)/(dim_z-1.f));
 				break;
 				}
 			}
@@ -486,7 +486,16 @@ extern "C" void runTest(int dimension)
 	float *df = new float[mx*my*mz];
 	float *sol = new float[mx*my*mz];
 
-	initInput(f, dimension);
+//	initInput(f, dimension);
+	float freq = fz;
+	if(dimension ==0)
+		freq = fx;
+	else if(dimension == 1)
+		freq = fy;
+	else
+		freq = fz;
+	FD_Init3dSpaceCos(f, dimension, mx, my, mz, 1.0f, freq);
+
 	initSol(sol, dimension);
 
 	// device arrays
@@ -669,9 +678,9 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	int stride = blockDim.x * gridDim.x;
 	for(int i = index; i < c_numElements; i += stride)
 	{
-		int materialIndex = c_mi[i];
-		T ga = c_ga[materialIndex];
-//		T ga = 2.0;
+//		int materialIndex = c_mi[i];
+//		T ga = c_ga[materialIndex];
+		T ga = 2.0;
 		d_e[i] = ga*(d_d[i] - d_i[i] - c_delExp * d_s[i]) ;
 	}
 }
@@ -684,7 +693,7 @@ static int electricField_step(void)
         int blockSize = 256;
         int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
 	float del_exp = 7.0f;
-printf("%s\n", __FUNCTION__);
+printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
 
 	// fixme these remain constant through out simulation, move to a
 	// better spot in initialization

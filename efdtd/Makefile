@@ -42,7 +42,7 @@ OBJECTS += windows.o
 ALIBS_XML = /usr/local/lib/libxml2.dll
 endif
 
-ALINK = $(CC)  $(ALFLAGS)
+ALINK = $(CC) $(ALFLAGS)
 
 
 
@@ -58,7 +58,7 @@ clean:
 	rm -rf $(PROJECT)$(OS_EXTENSION) $(PROJECT2)$(OS_EXTENSION) *~ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) doc  testbed trackball.o
 
 $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS) $(NVCC_OBJ)
-	@echo linking
+	@echo linking $@
 	@$(ALINK) -o $@ $(PROJECT).o $(OBJECTS) $(NVCC_OBJ) $(ALIBS) $(ALIBS_XML)
 	
 %.o: %.c
@@ -69,8 +69,9 @@ $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS) $(NVCC_OBJ)
 	@echo compiling $< with NVCC
 	@$(NVCC) -o $@ -c $< $(NVCCFLAGS)
 
-testbed: testbed.c trackball.o
-	@$(CC) $< -o $@ -lGLU -lGL -lXmu -lXi -lXext -lX11 -lm -lglut trackball.o
+testbed: testbed.o trackball.o  $(NVCC_OBJ)
+	@echo linking $@
+	@$(ALINK) -o $@ testbed.o trackball.o $(NVCC_OBJ) -lGLU -lGL -lXmu -lXi -lXext -lX11 -lm -lglut $(ALIBS)
 
 install: all
 	$(INSTALL) $(PROJECT2) $(bindir)/$(PROJECT2)
