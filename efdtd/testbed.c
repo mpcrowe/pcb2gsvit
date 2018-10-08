@@ -103,6 +103,7 @@ void makeVolume(GLuint edge)
 	int i,  j, k;
 	FD_Init3dSpaceCos(flatSpace, 2, MX, MY, MZ, 5.0f, 1.2f );
 
+	FD_Testbed(flatSpace, MX, MY, MZ);
 	glNewList(edge, GL_COMPILE);
 //		glShadeModel(GL_FLAT);  // flat shade keeps angular hands from being * * "smoothed" 
 		glPointSize(5);
