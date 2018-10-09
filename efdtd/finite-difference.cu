@@ -886,25 +886,30 @@ extern int FD_Testbed(float* image, int sx, int sy, int sz)
 {
 	int retval = 0;
 	int numElements = sx*sy*sz;
-	int blockSize = 256;
-        int numBlocks = ((numElements) + blockSize - 1) / blockSize;
 	int bytes = numElements *sizeof(float);
-	float* d_image;
-
+//	int blockSize = 256;
+//        int numBlocks = ((numElements) + blockSize - 1) / blockSize;
+//	float* d_image;
 	// allocate a space to copy test data into, and copy it in
-        retval += checkCuda( cudaMalloc((void**)&d_image, bytes), __LINE__  );
-	retval += checkCuda( cudaMemcpy(d_image, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
-
+//        retval += checkCuda( cudaMalloc((void**)&d_image, bytes), __LINE__  );
+//	retval += checkCuda( cudaMemcpy(d_image, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
+printf("%s\n", __FUNCTION__);
 
 	// do test
 
 	dim3 d(sx, sy, sz);	
 	retval += SimulationSpace_Create(&d);
+	retval += checkCuda( cudaMemcpy(simSpace.dField.d_x, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
+	
 //        arraySet<<<numBlocks, blockSize>>>(numElements, d_image, (float)-4.0);
+//	arraySet<<<numBlocks, blockSize>>>(numElements, simSpace.eField.d_x, (float)-4.0);
+	retval+= electricField_step();
 
 	// write it back out to view result using openGL tools
-	retval += checkCuda( cudaMemcpy(image, d_image, bytes, cudaMemcpyDeviceToHost), __LINE__  );
-	retval += checkCuda( cudaFree(d_image), __LINE__  );
+	retval += checkCuda( cudaMemcpy(image, simSpace.eField.d_x, bytes, cudaMemcpyDeviceToHost), __LINE__  );
+
+//	retval += checkCuda( cudaMemcpy(image, d_image, bytes, cudaMemcpyDeviceToHost), __LINE__  );
+//	retval += checkCuda( cudaFree(d_image), __LINE__  );
 
 	SimulationSpace_Destroy();
 
