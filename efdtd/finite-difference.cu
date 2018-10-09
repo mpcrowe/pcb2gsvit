@@ -678,9 +678,8 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	int stride = blockDim.x * gridDim.x;
 	for(int i = index; i < c_numElements; i += stride)
 	{
-//		int materialIndex = c_mi[i];
-//		T ga = c_ga[materialIndex];
-		T ga = 2.0;
+		int materialIndex = c_mi[i];
+		T ga = c_ga[materialIndex];
 		d_e[i] = ga*(d_d[i] - d_i[i] - c_delExp * d_s[i]) ;
 	}
 }
