@@ -680,6 +680,7 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	{
 		int materialIndex = c_mi[i];
 		T ga = c_ga[materialIndex];
+//		T ga = 1.0f;
 		d_e[i] = ga*(d_d[i] - d_i[i] - c_delExp * d_s[i]) ;
 	}
 }
@@ -846,6 +847,8 @@ static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 extern void SimulationSpace_Timestep(void)
 {
 printf("%s\n", __FUNCTION__);
+	checkCuda(cudaDeviceSynchronize(), __LINE__);
+
 	fluxDensity_step();
 	electricField_step();
 	magneticField_step();
@@ -902,6 +905,8 @@ printf("%s\n", __FUNCTION__);
 	
 //        arraySet<<<numBlocks, blockSize>>>(numElements, d_image, (float)-4.0);
 //	arraySet<<<numBlocks, blockSize>>>(numElements, simSpace.eField.d_x, (float)-4.0);
+	checkCuda(cudaDeviceSynchronize(), __LINE__);
+
 	retval+= electricField_step();
 
 	// write it back out to view result using openGL tools
