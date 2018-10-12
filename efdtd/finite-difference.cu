@@ -679,7 +679,6 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	{
 		int materialIndex = c_mi[i];
 		T ga = c_ga[materialIndex];
-//		T ga = 1.0f;
 		d_e[i] = ga*(d_d[i] - d_i[i] - c_delExp * d_s[i]) ;
 	}
 }
@@ -706,21 +705,21 @@ printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
 
 	// Ex
        	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_x, simSpace.dField.d_x, simSpace.iField.d_x, simSpace.sField.d_x);
-	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
-	if(retval)
-		return(retval);
+//	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+//	if(retval)
+//		return(retval);
 
 	// Ey
        	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_y, simSpace.dField.d_y, simSpace.iField.d_y, simSpace.sField.d_y);
-	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
-	if(retval)
-		return(retval);
+//	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+//	if(retval)
+//		return(retval);
 
 	// Ez
        	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_z, simSpace.dField.d_z, simSpace.iField.d_z, simSpace.sField.d_z);
-	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
-	if(retval)
-		return(retval);
+//	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+//	if(retval)
+//		return(retval);
 
 	return(retval);
 }
@@ -846,7 +845,7 @@ static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 extern void SimulationSpace_Timestep(void)
 {
 printf("%s\n", __FUNCTION__);
-	checkCuda(cudaDeviceSynchronize(), __LINE__);
+//	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
 	fluxDensity_step();
 	electricField_step();
