@@ -59,9 +59,9 @@ GLfloat lightOnePosition[] = {0.0, 0.0, 30.0, 1.0};
 GLfloat lightOneColor[] = {1.0, 1.0, 1.0, 1.0}; 
 /* *INDENT-ON* */
 
-#define MX 50
-#define MY 50
-#define MZ 50
+#define MX 48
+#define MY 48
+#define MZ 48
 #if 0
 GLfloat flatSpace[] = {
 			  0.0f, 0.0f, 0.0f, 0.0f, 0.0f,

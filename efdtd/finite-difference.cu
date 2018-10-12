@@ -644,7 +644,6 @@ printf("%s\n", __FUNCTION__);
     	// -dHx/dy
 	partialY(dest->d_z, src->d_x, -scale, size);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
-
 }
 
 
@@ -901,13 +900,17 @@ printf("%s\n", __FUNCTION__);
 
 	dim3 d(sx, sy, sz);	
 	retval += SimulationSpace_Create(&d);
-	retval += checkCuda( cudaMemcpy(simSpace.dField.d_x, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
+//	retval += checkCuda( cudaMemcpy(simSpace.hField.d_x, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
+	retval += checkCuda( cudaMemcpy(simSpace.hField.d_y, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
+//	retval += checkCuda( cudaMemcpy(simSpace.hField.d_z, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
+//	retval += checkCuda( cudaMemcpy(simSpace.dField.d_x, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
 	
 //        arraySet<<<numBlocks, blockSize>>>(numElements, d_image, (float)-4.0);
 //	arraySet<<<numBlocks, blockSize>>>(numElements, simSpace.eField.d_x, (float)-4.0);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
-	retval+= electricField_step();
+	SimulationSpace_Timestep();
+//	retval+= electricField_step();
 
 	// write it back out to view result using openGL tools
 	retval += checkCuda( cudaMemcpy(image, simSpace.eField.d_x, bytes, cudaMemcpyDeviceToHost), __LINE__  );
