@@ -41,6 +41,7 @@ __constant__ int c_mx, c_my, c_mz;
 __constant__ int c_numElements;
 __constant__ float c_delExp;  // coeff used in calculating the efield
 __constant__ float* c_ga;
+__constant__ float* c_gb;
 __constant__ int* c_mi;
 
 // stencil coefficients
@@ -670,6 +671,51 @@ printf("%s\n", __FUNCTION__);
 
 
 template <typename T>
+__global__ void iFieldDir_step(T* d_i, T* d_e )
+{
+	// i = i + gb*e
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	int stride = blockDim.x * gridDim.x;
+	for(int i = index; i < c_numElements; i += stride)
+	{
+		int materialIndex = c_mi[i];
+		T gb = c_gb[materialIndex];
+		d_i[i] += gb * d_e[i];
+	}
+}
+
+static int currentField_step(void)
+{
+	int retval = 0;
+	int bytes = simSpace.size.x * simSpace.size.y * simSpace.size.z * sizeof(float);
+        int blockSize = 256;
+        int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
+printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
+
+	// fixme these remain constant through out simulation, move to a
+	// better spot in initialization
+	retval += checkCuda( cudaMemcpyToSymbol(c_gb, &simSpace.d_gb, sizeof(float*)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_mi, &simSpace.d_mat_index, sizeof(char*)), __LINE__  );
+	if(retval)
+		return(retval);
+
+	// compute field for each axis
+
+	// Ix
+       	iFieldDir_step<<<numBlocks, blockSize>>>( simSpace.iField.d_x, simSpace.eField.d_x);
+
+	// Iy
+       	iFieldDir_step<<<numBlocks, blockSize>>>( simSpace.iField.d_y, simSpace.eField.d_y);
+
+	// Iz
+       	iFieldDir_step<<<numBlocks, blockSize>>>( simSpace.iField.d_z, simSpace.eField.d_z);
+
+	return(retval);
+}
+
+
+
+template <typename T>
 __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 {
 	// e = ga * (d -i - del_exp* s)
@@ -768,6 +814,20 @@ static int VectorField_Malloc(struct vector_field* field, dim3 size)
 }
 
 
+
+// d_ga --> 1/(Er + (sigma*dt/E0) + (chi*dt/t0) )
+// 	where
+//		Er = relative dielectric constant (1-15)
+//		sigma = conductivity (S/m)
+//		dt = timestep size (sec)
+//		E0 = Absolute dielectric constant
+//		chi = a dissapation factor related to the lossyness of the
+//			dielectric
+//		t0 = time constant representing the cut off frequency of the
+// 			lossy dielectric (sec)
+// d_gb --> sigma*dt/E0
+// d_gbc --> chi*dt/t0
+// del_exp = exp^(-dt/t0)
 static int SimulationSpace_Reset( struct simulation_space* pSpace)
 {
 	int retval = 0;
@@ -849,6 +909,8 @@ printf("%s\n", __FUNCTION__);
 
 	fluxDensity_step();
 	electricField_step();
+	currentField_step();
+
 	magneticField_step();
 }
 
