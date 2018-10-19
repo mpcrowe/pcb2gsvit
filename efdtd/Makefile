@@ -14,7 +14,7 @@ NVCC = nvcc
 NVCCFLAGS = -D_FORCE_INLINES -O2 -use_fast_math -DUCUDA -rdc=false
 NVCC_OBJ = finite-difference.o
 
-OBJECTS =  #gcdcInterface.o ihex.o version.o firmwareUpdater.o
+OBJECTS =  ../src/xpu.o ../src/material.o
 SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c med_vect.c file_edit.c
 AUX = Makefile
 PREMADES = 

@@ -10,131 +10,89 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
+#include <glib.h>  // for  using GList
+
+#include "../src/xpu.h"
+#include "../src/xpathConsts.h"
+#include "../src/material.h"
 
 
-// This the main host code for the finite difference 
+// This the main host code for the finite difference
 // example.  The kernels are contained in the derivative_m module
 #include "finite-difference.h"
-
-static void processNode(xmlTextReaderPtr reader)
-{
-	// handling of a node in the tree 
-	 xmlChar *name, *value;
-
-	name = xmlTextReaderName(reader);
-	if (name == NULL)
-		name = xmlStrdup(BAD_CAST "--");
-
-	value = xmlTextReaderValue(reader);
-
-	switch( xmlTextReaderNodeType(reader))
-	{
-	case XML_READER_TYPE_NONE:// = 0,
-		printf("none\n");
-	break;
-	case XML_READER_TYPE_ELEMENT:// = 1,
-		printf("start element %s\n", name);
-	break;
-	case XML_READER_TYPE_ATTRIBUTE:// = 2,
-	break;
-	case XML_READER_TYPE_TEXT:// = 3,
-		printf("text %s\n", name);
-	break;
-	case XML_READER_TYPE_CDATA:// = 4,
-		printf("cdata\n");
-	break;
-	case XML_READER_TYPE_ENTITY_REFERENCE:// = 5,
-		printf("entity reference\n");
-	break;
-	case XML_READER_TYPE_ENTITY:// = 6,
-		printf("entity\n");
-	break;
-	case XML_READER_TYPE_PROCESSING_INSTRUCTION:// = 7,
-		printf("processing instruction\n");
-	break;
-	case XML_READER_TYPE_COMMENT:// = 8,
-		printf("comment\n");
-	break;
-	case XML_READER_TYPE_DOCUMENT:// = 9,
-		printf("document\n");
-	break;
-	case XML_READER_TYPE_DOCUMENT_TYPE:// = 10,
-	break;
-	case XML_READER_TYPE_DOCUMENT_FRAGMENT:// = 11,
-	break;
-	case XML_READER_TYPE_NOTATION:// = 12,
-	break;
-	case XML_READER_TYPE_WHITESPACE:// = 13,
-	break;
-	case XML_READER_TYPE_SIGNIFICANT_WHITESPACE:// = 14,
-//		printf("whitespace\n");
-	break;
-	case XML_READER_TYPE_END_ELEMENT:// = 15,
-		printf("end element %s\n", name);
-	break;
-	case XML_READER_TYPE_END_ENTITY:// = 16,
-	break;
-	case XML_READER_TYPE_XML_DECLARATION:// = 17
-	break;
-	default:
-	break;
-	}
-
-//	printf("%d %d %s %d", xmlTextReaderDepth(reader), xmlTextReaderNodeType(reader), name,	xmlTextReaderIsEmptyElement(reader));
-	xmlFree(name);
-	if (value == NULL)
-	{
-//		printf("\n");
-	}
-	else
-	{
-//		printf(" \"%s\"\n", value);
-		xmlFree(value);
-	}
-}
 
 // main processing of xml files here
 static error_t processFile(char* fname, int verbose, int silent)
 {
 	error_t retval = 0;
-//	xmlDocPtr boardDoc;
-	int ret;
-//        xmlDocPtr xemDoc;
-//        char* xemFilename;
-//        int i;
-//        int j;
-//        int k;
+	xmlDocPtr boardDoc;
+	char* xemFilename;
+
 	// Load XML document
-//        boardDoc = xmlParseFile(fname);
-//        if (boardDoc == NULL)
-//        {
-//                fprintf(stderr, "Error: unable to parse File \"%s\"\n", fname);
-//                return(-1);
-//        }
-//	return(retval);
-	xmlTextReaderPtr reader = xmlNewTextReaderFilename(fname);
-	if (reader != NULL)
+	boardDoc = xmlParseFile(fname);
+	if (boardDoc == NULL)
 	{
-		ret = xmlTextReaderRead(reader);
-		while(ret == 1)
-		{
-			processNode(reader);
-			ret = xmlTextReaderRead(reader);
-		}
-		xmlFreeTextReader(reader);
-		if (ret != 0)
-		{
-			if(!silent)
-				printf("%s : failed to parse\n", fname);
-			retval = -2;
-		}
+		fprintf(stderr, "Error: unable to parse File \"%s\"\n", fname);
+		return(-1);
 	}
-	else
+	// create the materials table
+	xmlNodeSetPtr xnsMaterials  = XPU_GetNodeSet(boardDoc, XPATH_XEM_MATERIALS);
+	if(xnsMaterials == NULL)
+		goto processingFault;
+
+	retval = MATRL_CreateTableFromNodeSet(xnsMaterials);
+	if(retval)
+		goto processingFault;
+
+	MATRL_DumpAll();
+
+       // get xem filename
+	xemFilename = getXemFilename(boardDoc, filename);
+	if(xemFilename == NULL)
 	{
-		if(!silent)
-			printf("Unable to open %s\n", fname);
-		retval = -1;
+		goto processingFault;
 	}
+	fprintf(stdout, "%s\n",xemFilename);
+
+	// parse xem file
+	xemDoc = xmlParseFile(xemFilename);
+	if(xemDoc == NULL)
+	{
+		fprintf(stderr, "Error: unable to parse file \"%s\"\n", xemFilename);
+		return(-1);
+	}
+
+	// get width, in voxels (pixels)
+	xmlChar* cWidth = XPU_SimpleLookup(xemDoc,XPATH_NELMA_WIDTH);
+	if(cWidth == NULL)
+		goto processingFault;
+	gint width = strtol((char*)cWidth,NULL,10);
+	xmlFree(cWidth);
+
+	// get height, in voxels (pixels)
+	xmlChar* cHeight = XPU_SimpleLookup(xemDoc,XPATH_NELMA_HEIGHT);
+	if(cHeight == NULL)
+		goto processingFault;
+	gint height = strtol((char*)cHeight,NULL,10);
+	xmlFree(cHeight);
+
+	fprintf(stdout,"w:%d: h:%d:\n",width, height);
+
+	// get the pixel resolution, in meters per pixel
+	double res = XPU_GetDouble(xemDoc, XPATH_NELMA_RES);
+	if(isnan(res))
+		goto processingFault;
+	xmlChar* units = XPU_SimpleLookup(xemDoc, XPATH_NELMA_RES_UNITS);
+	res = MATRL_ScaleToMeters(res, (char*)units);
+	fprintf(stdout, "adjusted res: %g\n", res);
+
+
+	// get the layers from the board document
+	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
+	if(xnsLayers == NULL)
+		goto processingFault;
+
+processingFault:
 	return(retval);
 }
 
@@ -150,7 +108,7 @@ static struct argp_option options[] = {
 };
 
 #define MAX_ARGS 128
-// Used by main to communicate with parse_opt. 
+// Used by main to communicate with parse_opt.
 struct arguments
 {
 	char* args[MAX_ARGS];
@@ -200,9 +158,9 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 	return 0;
 }
 
-// Program command line documentation. 
+// Program command line documentation.
 static char doc[] = "efdtd -- a program to simulate printed circuit boards using FDTD method";
-// A description of the arguments we accept. 
+// A description of the arguments we accept.
 static char args_doc[] = "baseline.xml other.xml, ...";
 
 /* Our argp parser. */
@@ -222,10 +180,10 @@ int main(int argc, char* argv[])
 	for(i=0;i<MAX_ARGS;i++)
 		arguments.args[i] = NULL;
 
-	// Parse our arguments; every option seen by parse_opt will be reflected in arguments. 
+	// Parse our arguments; every option seen by parse_opt will be reflected in arguments.
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    
+
 	// get and display GPU device information
 	cudaGetDeviceProperties(&prop, 0);
 	printf("\nDevice Name: %s\n", prop.name);
@@ -258,27 +216,27 @@ int main(int argc, char* argv[])
 			break;
 	}
 
-	
+
 	// shutdown tasks here
-	
+
 	xmlCleanupParser();
 	// this is to debug memory for regression tests
 	//      xmlMemoryDump();
 	if(retval != 0)
 	{
 		return(retval);
-	}	
-	setDerivativeParameters(); // initialize 
+	}
+/*	setDerivativeParameters(); // initialize
 	dim3 size = {100,100,100};
 	SimulationSpace_Create(&size);
 	SimulationSpace_Timestep();
 
 	SimulationSpace_Destroy();
-	setDerivativeParameters(); // initialize 
+	setDerivativeParameters(); // initialize
 
 	runTest(0); // x derivative
 	runTest(1); // y derivative
 	runTest(2); // z derivative
-
+*/
 	return(0);
 }

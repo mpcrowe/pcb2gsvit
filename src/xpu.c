@@ -13,6 +13,50 @@
 
 #include "xpu.h"
 
+static char* getFilenamePath( const char* parentDocName)
+{
+        static char cwd[0x400];
+
+        char* preEnd;
+
+        if( getcwd(cwd, sizeof(cwd)) == NULL)
+        {
+                perror("getcwd() error");
+                return(NULL);
+        }
+
+        preEnd = strrchr(parentDocName, '/');
+        if(preEnd != NULL)
+        {
+                char* pstr = (char*)parentDocName;
+                int n = strlen(cwd);
+                char* pdest = &cwd[n];
+                *pdest++ = '/';
+                while(pstr != preEnd)
+                {
+                        *pdest++ = *pstr++;
+                }
+                *pdest = '\0';
+        }
+
+        return(cwd);
+}
+
+
+extern char* XPU_GetFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath)
+{
+        xmlChar* keyword = XPU_SimpleLookup(doc, (char*)xpath);
+        if( keyword == NULL)
+                return( NULL);
+        char* cwd = getFilenamePath(parentDocName);
+        if(cwd == NULL)
+                return(NULL);
+        sprintf(dest, "%s/%s",cwd, keyword );
+        xmlFree(keyword);
+        return(dest);
+}
+
+
 xmlChar* XPU_SimpleLookup(xmlDocPtr doc, char* xpathString)
 {
 	xmlXPathContextPtr xpathCtx;

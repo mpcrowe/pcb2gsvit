@@ -28,18 +28,7 @@
 *----------------------------------------------------------------------------*/
 #define MAX_FILENAME 0x200
 #define SVN_REV "found on github at https://github.com/mpcrowe/pcb2gsvit.git"
-
-#define XPATH_XEM_NAME "/boardInformation/gsvitExport/text()"
-#define XPATH_XEM_OUTPUT_FILENAME "/boardInformation/gsvit/mediumLinearFilename/text()"
-#define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
-#define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
-#define XPATH_XEM_OUTLINE "/boardInformation/boardStackup/layer[name/text()='outline']/material/text()"
-
-#define XPATH_NELMA_DRILLS "/gsvit/drills/drill"
-#define XPATH_NELMA_WIDTH "/gsvit/space/width/text()"
-#define XPATH_NELMA_HEIGHT "/gsvit/space/height/text()"
-#define XPATH_NELMA_RES	"/gsvit/space/resolution/text()"
-#define XPATH_NELMA_RES_UNITS	"/gsvit/space/resolution/@units"
+#include "xpathConsts.h"
 
 
 /*----------------------------------------------------------------------------
@@ -50,8 +39,6 @@
 *        Local functions
 *----------------------------------------------------------------------------*/
 char* getXemFilename(xmlDocPtr doc, const char* parentDocName);
-char* getFilenamePath( const char* parentDocName);
-char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath);
 char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName);
  	 	   	 	  
 int execute_conversion(const char* filename);
@@ -71,49 +58,6 @@ void generateParFileEditRules(void)
 
 
 
-char* getFilenamePath( const char* parentDocName)
-{
-	static char cwd[0x400];
-
-	char* preEnd;
-
-	if( getcwd(cwd, sizeof(cwd)) == NULL)
-	{
-		perror("getcwd() error");
-		return(NULL);
-	}
-
-	preEnd = strrchr(parentDocName, '/');
-	if(preEnd != NULL)
-	{
-		char* pstr = (char*)parentDocName;
-		int n = strlen(cwd);
-		char* pdest = &cwd[n];
-		*pdest++ = '/';
-		while(pstr != preEnd)
-		{
-			*pdest++ = *pstr++;
-		}
-		*pdest = '\0';
-	}
-
-	return(cwd);
-}
-
-
-char* getFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath)
-{
-	xmlChar* keyword = XPU_SimpleLookup(doc, (char*)xpath);
-	if( keyword == NULL)
-		return( NULL);
-	char* cwd = getFilenamePath(parentDocName);
-	if(cwd == NULL)
-		return(NULL);
-	sprintf(dest, "%s/%s",cwd, keyword );
-	xmlFree(keyword);
-	return(dest);
-}
-
 char* getLayerFilename(const char* xmlName, char* dest, char* basename);
 char* getLayerFilename(const char* xmlName, char* dest, char* basename)
 {
@@ -127,14 +71,14 @@ char* getLayerFilename(const char* xmlName, char* dest, char* basename)
 char* getXemFilename(xmlDocPtr doc, const char* parentDocName)
 {
 	static char fullName[0x400];
-	return(getFilename(doc, parentDocName, fullName, XPATH_XEM_NAME) );
+	return(XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_NAME) );
 }
 
 
 char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName)
 {
 	static char fullName[0x400];
-	return( getFilename(doc, parentDocName, fullName, XPATH_XEM_OUTPUT_FILENAME));
+	return( XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_OUTPUT_FILENAME));
 }
 
 
