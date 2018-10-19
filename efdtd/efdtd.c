@@ -21,11 +21,19 @@
 // example.  The kernels are contained in the derivative_m module
 #include "finite-difference.h"
 
+static char* getXemFilename(xmlDocPtr doc, const char* parentDocName)
+{
+	static char fullName[0x400];
+	return(XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_NAME) );
+}
+
+
 // main processing of xml files here
 static error_t processFile(char* fname, int verbose, int silent)
 {
 	error_t retval = 0;
 	xmlDocPtr boardDoc;
+	xmlDocPtr xemDoc;
 	char* xemFilename;
 
 	// Load XML document
@@ -47,7 +55,7 @@ static error_t processFile(char* fname, int verbose, int silent)
 	MATRL_DumpAll();
 
        // get xem filename
-	xemFilename = getXemFilename(boardDoc, filename);
+	xemFilename = getXemFilename(boardDoc, fname);
 	if(xemFilename == NULL)
 	{
 		goto processingFault;
