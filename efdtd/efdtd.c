@@ -43,6 +43,11 @@ static error_t processFile(char* fname, int verbose, int silent)
 		fprintf(stderr, "Error: unable to parse File \"%s\"\n", fname);
 		return(-1);
 	}
+	
+	xmlNodeSetPtr boardDocFrag = XPU_GetNodeSet(boardDoc, XPATH_XEM_BOARD_DOC);
+	if(boardDocFrag == NULL)
+		goto processingFault;
+	
 	// create the materials table
 	xmlNodeSetPtr xnsMaterials  = XPU_GetNodeSet(boardDoc, XPATH_XEM_MATERIALS);
 	if(xnsMaterials == NULL)

@@ -1,7 +1,7 @@
 #ifndef _XPATH_CONSTS
 #define _XPATH_CONSTS 1
 
-
+#define XPATH_XEM_BOARD_DOC "/boardInformation"
 #define XPATH_XEM_NAME "/boardInformation/gsvitExport/text()"
 #define XPATH_XEM_OUTPUT_FILENAME "/boardInformation/gsvit/mediumLinearFilename/text()"
 #define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
