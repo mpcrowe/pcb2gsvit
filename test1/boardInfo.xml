@@ -5,6 +5,9 @@
 	<gsvit>
 		<mediumLinearFilename>medLin.bin</mediumLinearFilename>
 	</gsvit>
+	<efdtd>
+		<riffFilename>medLin.riff</riffFilename>
+	</efdtd>
 	
 	<comment>this information is unknown by the pcb tool</comment>
 	<materials>

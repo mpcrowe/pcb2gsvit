@@ -7,6 +7,8 @@
 #define XPATH_XEM_MATERIALS "/boardInformation/materials/material"
 #define XPATH_XEM_LAYERS "/boardInformation/boardStackup/layer"
 #define XPATH_XEM_OUTLINE "/boardInformation/boardStackup/layer[name/text()='outline']/material/text()"
+#define XPATH_XEM_RIFF_FILENAME "/boardInformation/efdtd/riffFilename/text()"
+
 
 #define XPATH_NELMA_DRILLS "/gsvit/drills/drill"
 #define XPATH_NELMA_WIDTH "/gsvit/space/width/text()"

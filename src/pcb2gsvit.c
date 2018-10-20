@@ -81,6 +81,12 @@ char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName)
 	return( XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_OUTPUT_FILENAME));
 }
 
+char* getRiffOutputFilename(xmlDocPtr doc, const char* parentDocName)
+{
+	static char fullName[0x400];
+	return( XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_RIFF_FILENAME));
+}
+
 
 int execute_conversion(const char* filename)
 {
@@ -119,14 +125,14 @@ int execute_conversion(const char* filename)
 	xmlChar* cWidth = XPU_SimpleLookup(xemDoc,XPATH_NELMA_WIDTH);
 	if(cWidth == NULL)
 		goto processingFault;
-	gint width = strtol((char*)cWidth,NULL,10);
+	int32_t width = strtol((char*)cWidth,NULL,10);
 	xmlFree(cWidth);
 
 	// get height, in voxels (pixels)
 	xmlChar* cHeight = XPU_SimpleLookup(xemDoc,XPATH_NELMA_HEIGHT);
 	if(cHeight == NULL)
 		goto processingFault;
-	gint height = strtol((char*)cHeight,NULL,10);
+	int32_t height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
 
 	fprintf(stdout,"w:%d: h:%d:\n",width, height);
@@ -287,131 +293,195 @@ printf("bottom\n");
 	}
 
 	gLayers = g_list_reverse(gLayers);
-	gint depth =  g_list_length(gLayers);
+	int32_t depth =  g_list_length(gLayers);
 
 	float* fSlice = (float*)malloc(sizeof(float)*depth);
 	if( fSlice == NULL)
+		goto processingFault;
+
+	char* cSlice = (char*)malloc(sizeof(char)*depth);
+	if( cSlice == NULL)
 		goto processingFault;
 	
 	
 	fprintf(stdout, "\nLayer processing complete\nOpening output\n");
 	// open the Medium Linear Output file for gsvit
 	char* mlFname = getMediumLinearOutputFilename(boardDoc, filename);
-	if(mlFname == NULL)
-		goto processingFault;
+	if(mlFname != NULL)
+	{
 #define OUTPUT_MED_LIN 1
 #ifdef OUTPUT_MED_LIN
-	fprintf(stdout,"medium linear filename: %s\n", mlFname);
-	FILE* mlfd = fopen(mlFname, "w");
-	if(mlfd == NULL)
-	{
-		fprintf(stderr, "Unable to open <%s>\n", mlFname);
-		goto processingFault;
-	}
-	fprintf(stdout, "x:%d, y:%d z:%d  0x%x 0x%x 0x%x\n", width, height, depth, width, height, depth);
-	fwrite(&width, sizeof(gint), 1, mlfd);
-	fwrite(&height, sizeof(gint), 1, mlfd);
-	retval = fwrite(&depth, sizeof(gint) ,1, mlfd);
-	if(retval != 1)
-	{
-		fprintf(stderr, "Write error %d!= 1\n",retval);
-		goto processingFault;
-	}
-	fprintf(stdout, "starting Er\n");
-	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
-	for(i=0; i<width; i++)
-	{
-		for(j=0; j<height; j++)
+		fprintf(stdout,"medium linear filename: %s\n", mlFname);
+		FILE* mlfd = fopen(mlFname, "w");
+		if(mlfd == NULL)
 		{
-			float* pSlice = fSlice;
-			GList *l;
-			for (l = gLayers; l != NULL; l = l->next)
-			{
-				// do something with l->data
-				int index = ((fRect*)(l->data))->data[i][j];
-				*pSlice++ = MATRL_Er(index);
-			}
-			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
-			if(retval != depth)
-			{
-				fprintf(stderr, "file write error %d!=%d", retval, depth);
-				goto processingFault;
-			}
-			
+			fprintf(stderr, "Unable to open <%s>\n", mlFname);
+			goto processingFault;
 		}
-	}
+		fprintf(stdout, "x:%d, y:%d z:%d  0x%x 0x%x 0x%x\n", width, height, depth, width, height, depth);
+		fwrite(&width, sizeof(int32_t), 1, mlfd);
+		fwrite(&height, sizeof(int32_t), 1, mlfd);
+		retval = fwrite(&depth, sizeof(int32_t) ,1, mlfd);
+		if(retval != 1)
+		{
+			fprintf(stderr, "Write error %d!= 1\n",retval);
+			goto processingFault;
+		}
+		fprintf(stdout, "starting Er\n");
+		fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
+		for(i=0; i<width; i++)
+		{
+			for(j=0; j<height; j++)
+			{
+				float* pSlice = fSlice;
+				GList *l;
+				for (l = gLayers; l != NULL; l = l->next)
+				{
+					// do something with l->data
+					int index = ((fRect*)(l->data))->data[i][j];
+					*pSlice++ = MATRL_Er(index);
+				}
+				retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+				if(retval != depth)
+				{
+					fprintf(stderr, "file write error %d!=%d", retval, depth);
+					goto processingFault;
+				}
+			}
+		}
 
-	fprintf(stdout, "starting conductivity\n");		
-	for(i=0; i<width; i++)
-	{
-		for(j=0; j<height; j++)
+		fprintf(stdout, "starting conductivity\n");		
+		for(i=0; i<width; i++)
 		{
-			float* pSlice = fSlice;
-			GList *l;
-			for (l = gLayers; l != NULL; l = l->next)
+			for(j=0; j<height; j++)
 			{
-				// do something with l->data
-				int index = ((fRect*)(l->data))->data[i][j];
-				*pSlice++ = MATRL_Cond(index);
-			}
-			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
-			if(retval != depth)
-			{
-				fprintf(stderr, "file write error %d!=%d", retval, depth);
-				goto processingFault;
-			}
-			
-		}
-	}
-	fprintf(stdout, "starting Ur\n");
-	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
-	for(i=0; i<width; i++)
-	{
-		for(j=0; j<height; j++)
-		{
-			float* pSlice = fSlice;
-			GList *l;
-			for (l = gLayers; l != NULL; l = l->next)
-			{
-				// do something with l->data
-				int index = ((fRect*)(l->data))->data[i][j];
-				*pSlice++ = 1.0;
-//				*pSlice++ = MATRL_Ur(index);
-			}
-			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
-			if(retval != depth)
-			{
-				fprintf(stderr, "file write error %d!=%d", retval, depth);
-				goto processingFault;
-			}
-			
-		}
-	}
-	fprintf(stdout, "starting magnetic conductivity (susceptibility)\n");
-	fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
-	for(i=0; i<width; i++)
-	{
-		for(j=0; j<height; j++)
-		{
-			float* pSlice = fSlice;
-			GList *l;
-			for (l = gLayers; l != NULL; l = l->next)
-			{
-				int index = ((fRect*)(l->data))->data[i][j];
-//				*pSlice++ = MATRL_Sus(index);
-				*pSlice++ = 0.0;
-			}
-			retval = fwrite(fSlice, sizeof(float), depth, mlfd);
-			if(retval != depth)
-			{
-				fprintf(stderr, "file write error %d!=%d", retval, depth);
-				goto processingFault;
+				float* pSlice = fSlice;
+				GList *l;
+				for (l = gLayers; l != NULL; l = l->next)
+				{
+					// do something with l->data
+					int index = ((fRect*)(l->data))->data[i][j];
+					*pSlice++ = MATRL_Cond(index);
+				}
+				retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+				if(retval != depth)
+				{
+					fprintf(stderr, "file write error %d!=%d", retval, depth);
+					goto processingFault;
+				}
+				
 			}
 		}
-	}
+		fprintf(stdout, "starting Ur\n");
+		fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
+		for(i=0; i<width; i++)
+		{
+			for(j=0; j<height; j++)
+			{
+				float* pSlice = fSlice;
+				GList *l;
+				for (l = gLayers; l != NULL; l = l->next)
+				{
+					// do something with l->data
+					int index = ((fRect*)(l->data))->data[i][j];
+					*pSlice++ = 1.0;
+					//				*pSlice++ = MATRL_Ur(index);
+				}
+				retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+				if(retval != depth)
+				{
+					fprintf(stderr, "file write error %d!=%d", retval, depth);
+					goto processingFault;
+				}
+			}
+		}
+		fprintf(stdout, "starting magnetic conductivity (susceptibility)\n");
+		fprintf(stdout, "size x:%d, y:%d z:%d\n",width, height, depth);
+		for(i=0; i<width; i++)
+		{
+			for(j=0; j<height; j++)
+			{
+				float* pSlice = fSlice;
+				GList *l;
+				for (l = gLayers; l != NULL; l = l->next)
+				{
+					int index = ((fRect*)(l->data))->data[i][j];
+					//				*pSlice++ = MATRL_Sus(index);
+					*pSlice++ = 0.0;
+				}
+				retval = fwrite(fSlice, sizeof(float), depth, mlfd);
+				if(retval != depth)
+				{
+					fprintf(stderr, "file write error %d!=%d", retval, depth);
+					goto processingFault;
+				}
+			}
+		}
 
-	fclose(mlfd);
+		fclose(mlfd);
 #endif	
+	}
+	
+	// open the riff Output file for efdtd
+	char* riffFname = getRiffOutputFilename(boardDoc, filename);
+	if(riffFname != NULL)
+	{
+		fprintf(stdout,"riff filename: %s\n", riffFname);
+		FILE* rifffd = fopen(riffFname, "w");
+		if(rifffd == NULL)
+		{
+			fprintf(stderr, "Unable to open <%s>\n", riffFname);
+			goto processingFault;
+		}
+
+		int32_t chnkSize = width*height*depth*sizeof(char) + sizeof(int32_t)*3*2;
+		int32_t offset_x = 0;
+		int32_t offset_y = 0;
+		int32_t offset_z = 0;
+
+		fprintf(stdout, "x:%d, y:%d z:%d  0x%x 0x%x 0x%x chnk:%d\n", width, height, depth, width, height, depth, chnkSize);
+
+		// write out header, ID, chnk size, sz_x sz_y, sz_z, off_x, off_y, off_z, data....
+		retval = fprintf(rifffd,"fdtd");
+		retval += fwrite(&chnkSize, sizeof(int32_t), 1, rifffd);
+		retval += fwrite(&width, sizeof(int32_t), 1, rifffd);
+		retval += fwrite(&height, sizeof(int32_t), 1, rifffd);
+		retval += fwrite(&depth, sizeof(int32_t) ,1, rifffd);
+		retval += fwrite(&offset_x, sizeof(int32_t) ,1, rifffd);
+		retval += fwrite(&offset_y, sizeof(int32_t) ,1, rifffd);
+		retval += fwrite(&offset_z, sizeof(int32_t) ,1, rifffd);
+		if(retval != 11)
+		{
+			fprintf(stderr, "Header write error <%s> %d != %ld\n", riffFname, retval,  sizeof(int32_t)*8);
+			goto processingFault;
+		}
+		
+
+		for(i=0; i<width; i++)
+		{
+			for(j=0; j<height; j++)
+			{
+				char* pSlice = cSlice;
+				GList *l;
+				for (l = gLayers; l != NULL; l = l->next)
+				{
+					// do something with l->data
+					int index = ((fRect*)(l->data))->data[i][j];
+					*pSlice++ = (char)index;
+				}
+				retval = fwrite(cSlice, sizeof(char), depth, rifffd);
+				if(retval != depth)
+				{
+					fprintf(stderr, "file write error %d!=%d", retval, depth);
+					goto processingFault;
+				}
+			}
+		}
+		fclose(rifffd);
+		
+	}
+	
+	
 	xmlNodeSetPtr xnsDrills  = XPU_GetNodeSet(xemDoc, XPATH_NELMA_DRILLS);
 	
 
