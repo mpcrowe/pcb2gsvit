@@ -43,17 +43,17 @@ static error_t processFile(char* fname, int verbose, int silent)
 		fprintf(stderr, "Error: unable to parse File \"%s\"\n", fname);
 		return(-1);
 	}
-	
-	xmlNodeSetPtr boardDocFrag = XPU_GetNodeSet(boardDoc, XPATH_XEM_BOARD_DOC);
-	if(boardDocFrag == NULL)
-		goto processingFault;
+
+	// determine xml file typ by looking at root level doc	
+//	xmlNodeSetPtr boardDocFrag = XPU_GetNodeSet(boardDoc, XPATH_XEM_BOARD_DOC);
+//	if(boardDocFrag == NULL)
+//		goto processingFault;
 	
 	// create the materials table
 	xmlNodeSetPtr xnsMaterials  = XPU_GetNodeSet(boardDoc, XPATH_XEM_MATERIALS);
-	if(xnsMaterials == NULL)
-		goto processingFault;
-
-	retval = MATRL_CreateTableFromNodeSet(xnsMaterials);
+	if(xnsMaterials != NULL)
+		retval = MATRL_CreateTableFromNodeSet(xnsMaterials);
+		
 	if(retval)
 		goto processingFault;
 
@@ -61,44 +61,46 @@ static error_t processFile(char* fname, int verbose, int silent)
 
        // get xem filename
 	xemFilename = getXemFilename(boardDoc, fname);
-	if(xemFilename == NULL)
+	if(xemFilename != NULL)
 	{
-		goto processingFault;
+		fprintf(stdout, "%s\n",xemFilename);
+
+		// parse xem file
+		xemDoc = xmlParseFile(xemFilename);
+		if(xemDoc == NULL)
+		{
+			fprintf(stderr, "Error: unable to parse file \"%s\"\n", xemFilename);
+			return(-1);
+		}
+
+		// get width, in voxels (pixels)
+		xmlChar* cWidth = XPU_SimpleLookup(xemDoc,XPATH_NELMA_WIDTH);
+		if(cWidth)
+		{
+			gint width = strtol((char*)cWidth,NULL,10);
+			xmlFree(cWidth);
+			fprintf(stdout,"w:%d\n",width);
+		}
+
+		// get height, in voxels (pixels)
+		xmlChar* cHeight = XPU_SimpleLookup(xemDoc,XPATH_NELMA_HEIGHT);
+		if(cHeight)
+		{
+			gint height = strtol((char*)cHeight,NULL,10);
+			xmlFree(cHeight);
+			fprintf(stdout,"h:%d\n", height);
+		}
+
+
+		// get the pixel resolution, in meters per pixel
+		double res = XPU_GetDouble(xemDoc, XPATH_NELMA_RES);
+		if(!isnan(res))
+		{
+			xmlChar* units = XPU_SimpleLookup(xemDoc, XPATH_NELMA_RES_UNITS);
+			res = MATRL_ScaleToMeters(res, (char*)units);
+			fprintf(stdout, "adjusted res: %g (meters/pixel)\n", res);
+		}
 	}
-	fprintf(stdout, "%s\n",xemFilename);
-
-	// parse xem file
-	xemDoc = xmlParseFile(xemFilename);
-	if(xemDoc == NULL)
-	{
-		fprintf(stderr, "Error: unable to parse file \"%s\"\n", xemFilename);
-		return(-1);
-	}
-
-	// get width, in voxels (pixels)
-	xmlChar* cWidth = XPU_SimpleLookup(xemDoc,XPATH_NELMA_WIDTH);
-	if(cWidth == NULL)
-		goto processingFault;
-	gint width = strtol((char*)cWidth,NULL,10);
-	xmlFree(cWidth);
-
-	// get height, in voxels (pixels)
-	xmlChar* cHeight = XPU_SimpleLookup(xemDoc,XPATH_NELMA_HEIGHT);
-	if(cHeight == NULL)
-		goto processingFault;
-	gint height = strtol((char*)cHeight,NULL,10);
-	xmlFree(cHeight);
-
-	fprintf(stdout,"w:%d: h:%d:\n",width, height);
-
-	// get the pixel resolution, in meters per pixel
-	double res = XPU_GetDouble(xemDoc, XPATH_NELMA_RES);
-	if(isnan(res))
-		goto processingFault;
-	xmlChar* units = XPU_SimpleLookup(xemDoc, XPATH_NELMA_RES_UNITS);
-	res = MATRL_ScaleToMeters(res, (char*)units);
-	fprintf(stdout, "adjusted res: %g\n", res);
-
 
 	// get the layers from the board document
 	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
