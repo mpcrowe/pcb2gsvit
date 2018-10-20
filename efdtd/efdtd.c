@@ -27,6 +27,73 @@ static char* getXemFilename(xmlDocPtr doc, const char* parentDocName)
 	return(XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_NAME) );
 }
 
+static char* getRiffFilename(xmlDocPtr doc, const char* parentDocName)
+{
+	static char fullName[0x400];
+	return(XPU_GetFilename(doc, parentDocName, fullName, XPATH_XEM_RIFF_FILENAME) );
+}
+
+static int readRiff(char* riffFname)
+{
+	int retval;
+	FILE* rifffd = fopen(riffFname, "r");
+	if(rifffd == NULL)
+	{
+		fprintf(stderr, "Unable to open <%s>\n", riffFname);
+		goto processingFault;
+	}
+	char chnkName[5];
+	int32_t chnkSize;
+printf("%s reading %s\n",__FUNCTION__, riffFname);
+		
+	while(1)
+	{
+		retval = fread(chnkName, sizeof(char), 4, rifffd);
+		retval += fread(&chnkSize, sizeof(int32_t), 1, rifffd);
+		if(retval != 5)
+		{
+			fprintf(stderr, "Header read error <%s> %d != %d\n", riffFname, retval,  5);
+			goto processingFault;
+		}
+		chnkName[4] = 0;
+		if( chnkName[0]=='f' && chnkName[1]=='d' && chnkName[2]=='t' && chnkName[3]=='d')
+		{
+			int32_t s_x = 0;
+			int32_t s_y = 0;
+			int32_t s_z = 0;
+			int32_t off_x = 0;
+			int32_t off_y = 0;
+			int32_t off_z = 0;
+		
+			retval = fread(&s_x,sizeof(int32_t), 1, rifffd);
+			retval += fread(&s_y,sizeof(int32_t), 1, rifffd);
+			retval += fread(&s_z,sizeof(int32_t), 1, rifffd);
+			retval += fread(&off_x,sizeof(int32_t), 1, rifffd);
+			retval += fread(&off_y,sizeof(int32_t), 1, rifffd);
+			retval += fread(&off_z,sizeof(int32_t), 1, rifffd);
+
+			if(retval != 6)
+			{
+				fprintf(stderr, "Header read error <%s> %d != %d\n", riffFname, retval,  6);
+				goto processingFault;
+			}
+			fprintf(stdout, "x:%d, y:%d z:%d  offx:%d offy:%d offz:%d chnk:%d\n", s_x, s_y, s_z, off_x, off_y, off_z, chnkSize);
+		//	break;
+		}
+		else
+		{ // not my type of chunk
+			fprintf(stderr, "Unrecognized chunk\n");
+			// if not a chunk, we are lost, break out of processing
+			if(!isalnum(chnkName[0]) || !isalnum(chnkName[1]) || !isalnum(chnkName[2]) || !isalnum(chnkName[3]) )
+				break;
+			fseek(rifffd, chnkSize, SEEK_CUR);
+			continue;
+		}
+	}
+processingFault:
+	fclose(rifffd);
+	return(0);
+}
 
 // main processing of xml files here
 static error_t processFile(char* fname, int verbose, int silent)
@@ -106,6 +173,14 @@ static error_t processFile(char* fname, int verbose, int silent)
 	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
 	if(xnsLayers == NULL)
 		goto processingFault;
+		
+	char* riffFilename = getRiffFilename(boardDoc, fname);
+	if(riffFilename != NULL)
+	{
+		readRiff(riffFilename);
+		
+	}
+
 
 processingFault:
 	return(retval);
