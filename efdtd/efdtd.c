@@ -52,6 +52,8 @@ printf("%s reading %s\n",__FUNCTION__, riffFname);
 		retval += fread(&chnkSize, sizeof(int32_t), 1, rifffd);
 		if(retval != 5)
 		{
+			if(feof(rifffd))
+				break;
 			fprintf(stderr, "Header read error <%s> %d != %d\n", riffFname, retval,  5);
 			goto processingFault;
 		}
@@ -64,6 +66,7 @@ printf("%s reading %s\n",__FUNCTION__, riffFname);
 			int32_t off_x = 0;
 			int32_t off_y = 0;
 			int32_t off_z = 0;
+			int32_t i, j;
 		
 			retval = fread(&s_x,sizeof(int32_t), 1, rifffd);
 			retval += fread(&s_y,sizeof(int32_t), 1, rifffd);
@@ -78,6 +81,22 @@ printf("%s reading %s\n",__FUNCTION__, riffFname);
 				goto processingFault;
 			}
 			fprintf(stdout, "x:%d, y:%d z:%d  offx:%d offy:%d offz:%d chnk:%d\n", s_x, s_y, s_z, off_x, off_y, off_z, chnkSize);
+			char* zline = (char*)malloc(sizeof(char)*s_z);
+			for(i=0; i<s_x; i++)
+			{
+				for(j=0; j<s_y; j++)
+				{
+					retval = fread(zline, sizeof(char), s_z, rifffd);
+					if(retval != s_z)
+					{
+						fprintf(stderr, "%s Data read error <%s> %d != %d\n", __FUNCTION__, riffFname, retval,  s_z);
+						goto processingFault;
+					}
+					// insert line into space
+					//zlineInsert(zline, i+off_x, j+off_y, off_z, s_z);
+				}
+			}
+			free(zline);
 		//	break;
 		}
 		else
