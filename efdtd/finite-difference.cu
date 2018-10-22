@@ -944,6 +944,31 @@ extern int SimulationSpace_Destroy(void)
 	return(retval);
 }
 
+
+// inserts a "string" of z-axis spatial data into the material index
+// matrix at the specified x,y and z offsets
+// this function is used to build the image in the GPU that will be
+// simulated
+extern int FD_zlineInsert(char* zline, int x, int y, int z, int len)
+{
+	int retval;
+	char* ptr = simSpace.d_mat_index;
+	if(ptr == NULL)	// if space not initialized return error
+		return(-1);
+	int offset = simSpace.size.y*simSpace.size.z * x + simSpace.size.z * y + z;
+	if( offset > (simSpace.size.x*simSpace.size.y*simSpace.size.z) )
+		return(-2);	// if out of bounds return error
+
+	ptr += offset;
+
+	// sync needed so that zline may be overwritten by CPU after the
+	// Memcpy call
+	retval = checkCuda( cudaMemcpy(ptr, zline, len, cudaMemcpyHostToDevice), __LINE__ );
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);	
+	return(retval);
+}
+
+
 extern int FD_Testbed(float* image, int sx, int sy, int sz)
 {
 	int retval = 0;

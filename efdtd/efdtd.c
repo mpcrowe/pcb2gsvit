@@ -93,7 +93,12 @@ printf("%s reading %s\n",__FUNCTION__, riffFname);
 						goto processingFault;
 					}
 					// insert line into space
-					//zlineInsert(zline, i+off_x, j+off_y, off_z, s_z);
+					retval = FD_zlineInsert(zline, i+off_x, j+off_y, off_z, s_z);
+					if(retval)
+					{
+						fprintf(stderr, "%s Data write error into GPU space at (%d,%d,%d) size:%d returned %d\n", __FUNCTION__,  i+off_x, j+off_y, off_z, s_z, retval);
+						goto processingFault;
+					}
 				}
 			}
 			free(zline);
