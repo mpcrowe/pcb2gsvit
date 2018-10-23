@@ -14,8 +14,8 @@ NVCC = nvcc
 NVCCFLAGS = -D_FORCE_INLINES -O2 -use_fast_math -DUCUDA -rdc=false
 NVCC_OBJ = finite-difference.o
 
-OBJECTS =  ../src/xpu.o ../src/material.o
-SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c med_vect.c file_edit.c
+OBJECTS =  ../src/xpu.o ../src/material.o file_processing.o
+SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c med_vect.c file_edit.c file_processing.c
 AUX = Makefile
 PREMADES = 
 #GWY_CFLAGS=-I/usr/include/gwyddion -I/usr/lib//gwyddion/include
