@@ -587,6 +587,7 @@ struct simulation_space
 
 
 // fixme wrap these things into a structure
+int spaceInitialized = 0;
 struct simulation_space simSpace;	// component fields
 float* cpuWorkingSpace;		// this is a space the same size as the volume as we work with in the GPU, use it as a temporary work space
 
@@ -724,6 +725,10 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	for(int i = index; i < c_numElements; i += stride)
 	{
 		int materialIndex = c_mi[i];
+		if(materialIndex>127)
+			materialIndex = 127;
+		if(materialIndex<0)
+			materialIndex = 0;
 		T ga = c_ga[materialIndex];
 		d_e[i] = ga*(d_d[i] - d_i[i] - c_delExp * d_s[i]) ;
 	}
@@ -751,21 +756,21 @@ printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
 
 	// Ex
        	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_x, simSpace.dField.d_x, simSpace.iField.d_x, simSpace.sField.d_x);
-//	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
-//	if(retval)
-//		return(retval);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
 
 	// Ey
        	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_y, simSpace.dField.d_y, simSpace.iField.d_y, simSpace.sField.d_y);
-//	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
-//	if(retval)
-//		return(retval);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
 
 	// Ez
        	eFieldDir_step<<<numBlocks, blockSize>>>( simSpace.eField.d_z, simSpace.dField.d_z, simSpace.iField.d_z, simSpace.sField.d_z);
-//	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
-//	if(retval)
-//		return(retval);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
 
 	return(retval);
 }
@@ -922,6 +927,12 @@ extern int SimulationSpace_Create(dim3* sim_size)
 {
 	int retval = 0;
 	int bytes = sim_size->x * sim_size->y * sim_size->x * sizeof(float);
+	if(spaceInitialized != 0)
+	{
+		fprintf(stderr, "%s Warning space alreaded allocated as (%d, %d, %d)\n",__FUNCTION__,
+simSpace.size.x,simSpace.size.y,simSpace.size.z);
+		return(retval);
+	}
 
 	cpuWorkingSpace = (float*)malloc(bytes);
 printf("%s allocating %d(kB) (%d, %d, %d)\n",__FUNCTION__, 6*3*bytes/1024, sim_size->x,sim_size->y,sim_size->z);
@@ -929,7 +940,7 @@ printf("%s allocating %d(kB) (%d, %d, %d)\n",__FUNCTION__, 6*3*bytes/1024, sim_s
 printf("spaces allocated, initializing\n");
 	retval += SimulationSpace_ResetFields();
 printf("initialized\n");
-
+	spaceInitialized = 1;
 	return(retval);
 }
 
@@ -969,7 +980,7 @@ extern int FD_zlineInsert(char* zline, int x, int y, int z, int len)
 }
 
 
-extern int FD_Testbed(float* image, int sx, int sy, int sz)
+extern int FD_Testbed(void* image, int sx, int sy, int sz)
 {
 	int retval = 0;
 	int numElements = sx*sy*sz;
@@ -995,11 +1006,12 @@ printf("%s\n", __FUNCTION__);
 //	arraySet<<<numBlocks, blockSize>>>(numElements, simSpace.eField.d_x, (float)-4.0);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
-	SimulationSpace_Timestep();
+//	SimulationSpace_Timestep();
 //	retval+= electricField_step();
 
 	// write it back out to view result using openGL tools
-	retval += checkCuda( cudaMemcpy(image, simSpace.eField.d_x, bytes, cudaMemcpyDeviceToHost), __LINE__  );
+//	retval += checkCuda( cudaMemcpy(image, simSpace.eField.d_x, bytes, cudaMemcpyDeviceToHost), __LINE__  );
+	retval += checkCuda( cudaMemcpy(image, simSpace.d_mat_index, numElements, cudaMemcpyDeviceToHost), __LINE__  );
 
 //	retval += checkCuda( cudaMemcpy(image, d_image, bytes, cudaMemcpyDeviceToHost), __LINE__  );
 //	retval += checkCuda( cudaFree(d_image), __LINE__  );

@@ -69,9 +69,9 @@ $(PROJECT)$(OS_EXTENSION): $(PROJECT).o $(PREMADES) $(OBJECTS) $(NVCC_OBJ)
 	@echo compiling $< with NVCC
 	@$(NVCC) -o $@ -c $< $(NVCCFLAGS)
 
-testbed: testbed.o trackball.o  $(NVCC_OBJ)
+testbed: testbed.o trackball.o  $(NVCC_OBJ) $(OBJECTS)
 	@echo linking $@
-	@$(ALINK) -o $@ testbed.o trackball.o $(NVCC_OBJ) -lGLU -lGL -lXmu -lXi -lXext -lX11 -lm -lglut $(ALIBS)
+	@$(ALINK) -o $@ testbed.o trackball.o $(NVCC_OBJ) $(OBJECTS) -lGLU -lGL -lXmu -lXi -lXext -lX11 -lm -lglut $(ALIBS) $(ALIBS_XML)
 
 install: all
 	$(INSTALL) $(PROJECT2) $(bindir)/$(PROJECT2)

@@ -81,6 +81,22 @@ printf("%s reading %s\n",__FUNCTION__, riffFname);
 				goto processingFault;
 			}
 			fprintf(stdout, "x:%d, y:%d z:%d  offx:%d offy:%d offz:%d chnk:%d\n", s_x, s_y, s_z, off_x, off_y, off_z, chnkSize);
+			dim3 gpuSize;
+			gpuSize.x = s_x+off_x;
+			gpuSize.y = s_y+off_y;
+			gpuSize.z = s_z+off_z;
+			
+			if(gpuSize.x%4 != 0)
+				gpuSize.x = ((gpuSize.x/4)+1)*4;
+			if(gpuSize.y%4 != 0)
+				gpuSize.y = ((gpuSize.y/4)+1)*4;
+			if(gpuSize.z%4 != 0)
+				gpuSize.z = ((gpuSize.z/4)+1)*4;
+			
+			retval = SimulationSpace_Create(&gpuSize);
+			if(retval)
+				goto processingFault;
+			
 			char* zline = (char*)malloc(sizeof(char)*s_z);
 			for(i=0; i<s_x; i++)
 			{
@@ -120,7 +136,7 @@ processingFault:
 }
 
 // main processing of xml files here
-extern error_t FP_ProcessFile(char* fname, int verbose, int silent)
+extern int FP_ProcessFile(char* fname, int verbose, int silent)
 {
 	error_t retval = 0;
 	xmlDocPtr boardDoc;

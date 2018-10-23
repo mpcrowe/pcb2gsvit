@@ -14,7 +14,7 @@ implied. This program is -not- in the public domain. */
 #include <math.h>       /* for cos(), sin(), and sqrt() */
 #include <GL/glut.h>
 #include "trackball.h"
-
+#include "file_processing.h"
 #include "finite-difference.h"
 
 typedef enum {
@@ -59,9 +59,9 @@ GLfloat lightOnePosition[] = {0.0, 0.0, 30.0, 1.0};
 GLfloat lightOneColor[] = {1.0, 1.0, 1.0, 1.0}; 
 /* *INDENT-ON* */
 
-#define MX 48
-#define MY 48
-#define MZ 48
+#define MX 176
+#define MY 96
+#define MZ 44
 #if 0
 GLfloat flatSpace[] = {
 			  0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
@@ -95,15 +95,18 @@ GLfloat flatSpace[] = {
 			  4.4f, 4.4f, 4.4f, 4.4f, 4.4f
 };
 #else
-GLfloat flatSpace[MX*MY*MZ];
+char flatSpace[MX*MY*MZ*16*4];
 #endif
+#define MAX_VAL 2.0f
 
 void makeVolume(GLuint edge)
 {
 	int i,  j, k;
-	FD_Init3dSpaceCos(flatSpace, 2, MX, MY, MZ, 5.0f, 1.2f );
+//	FD_Init3dSpaceCos(flatSpace, 2, MX, MY, MZ, 5.0f, 1.2f );
+	FP_ReadRiff("../test1/medLin.riff");
 printf("%s\n", __FUNCTION__);
 	FD_Testbed(flatSpace, MX, MY, MZ);
+printf("reading back\n");
 	glNewList(edge, GL_COMPILE);
 //		glShadeModel(GL_FLAT);  // flat shade keeps angular hands from being * * "smoothed" 
 		glPointSize(5);
@@ -116,10 +119,11 @@ printf("%s\n", __FUNCTION__);
 				{	// look up the value at the space in the array then convert it to a color
 					int index = MY*MZ*i + MZ*j + k;
 					float val = flatSpace[index];
+//					printf("val %3.1f\n",val);
 					GLfloat color[4];
 					if(val >0)
 					{
-						color[0] = val/5.0f;
+						color[0] = val/MAX_VAL;
 						color[1] = (5-val)/5;
 						color[2] =-1.0;
 						color[3] = 0.5;
@@ -127,7 +131,7 @@ printf("%s\n", __FUNCTION__);
 					else
 					{
 						val = -val;
-						color[2] = val/5.0f;
+						color[2] = val/MAX_VAL;
 						color[1] = (val-5)/5;
 						color[0] = -1.0;
 						color[3] = 0.5;
@@ -457,7 +461,7 @@ main(int argc, char **argv)
 	glMatrixMode(GL_PROJECTION);
 	gluPerspective( /* field of view in degree */ 40.0,
 		/* aspect ratio */ 1.0,
-		/* Z near */ 1.0, /* Z far */ (float)MZ*5.0);
+		/* Z near */ 1.0, /* Z far */ (float)MZ*MAX_VAL);
 	glMatrixMode(GL_MODELVIEW);
 	gluLookAt(0.0, 0.0, (float)MZ*3.0,  /* eye is at (0,0,30) */
 		0.0, 0.0, 0.0,      /* center is at (0,0,0) */
