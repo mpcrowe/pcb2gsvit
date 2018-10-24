@@ -625,7 +625,7 @@ static void partialZ(float* dest, float* src, float scale, dim3 size)
 // this is used to compute the flux density and the magnetic field
 static void curlAccum(struct vector_field* dest, struct vector_field* src, float scale, dim3 size)
 {
-printf("%s\n", __FUNCTION__);
+//printf("%s\n", __FUNCTION__);
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
     	// dHz/dy
 	partialY(dest->d_x, src->d_z, scale, size);
@@ -655,7 +655,7 @@ printf("%s\n", __FUNCTION__);
 void fluxDensity_step(void)
 {
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
-printf("%s\n", __FUNCTION__);
+//printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.dField, &simSpace.hField, 1.0f, simSpace.size);
 }
 
@@ -666,7 +666,7 @@ printf("%s\n", __FUNCTION__);
 void magneticField_step(void)
 {
 	//Hx(t+1) = Hx(t)+ (dEy/dz - dEz/dy)
-printf("%s\n", __FUNCTION__);
+//printf("%s\n", __FUNCTION__);
 	curlAccum(&simSpace.hField, &simSpace.eField, -1.0f, simSpace.size);
 }
 
@@ -691,14 +691,7 @@ static int currentField_step(void)
 	int bytes = simSpace.size.x * simSpace.size.y * simSpace.size.z * sizeof(float);
         int blockSize = 256;
         int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
-printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
-
-	// fixme these remain constant through out simulation, move to a
-	// better spot in initialization
-	retval += checkCuda( cudaMemcpyToSymbol(c_gb, &simSpace.d_gb, sizeof(float*)), __LINE__  );
-	retval += checkCuda( cudaMemcpyToSymbol(c_mi, &simSpace.d_mat_index, sizeof(char*)), __LINE__  );
-	if(retval)
-		return(retval);
+//printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
 
 	// compute field for each axis
 
@@ -742,13 +735,11 @@ static int electricField_step(void)
         int blockSize = 256;
         int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
 	float del_exp = 7.0f;
-printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
+//printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
 
 	// fixme these remain constant through out simulation, move to a
 	// better spot in initialization
 	retval += checkCuda( cudaMemcpyToSymbol(c_delExp, &del_exp, sizeof(float)), __LINE__  );
-	retval += checkCuda( cudaMemcpyToSymbol(c_ga, &simSpace.d_ga, sizeof(float*)), __LINE__  );
-	retval += checkCuda( cudaMemcpyToSymbol(c_mi, &simSpace.d_mat_index, sizeof(char*)), __LINE__  );
 	if(retval)
 		return(retval);
 
@@ -884,9 +875,16 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	retval += VectorField_Malloc(&pSpace->iField, pSpace->size);
 	retval += VectorField_Malloc(&pSpace->sField, pSpace->size);
 
+
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_mat_index, numE * sizeof(char))  , __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, 128 * sizeof(float)), __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, 128 * sizeof(float)), __LINE__  );
+	// put a copy of the pointers into const memory so that the GPU
+	// functions can directly access these spaces
+	retval += checkCuda( cudaMemcpyToSymbol(c_ga, &simSpace.d_ga, sizeof(float*)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_gb, &simSpace.d_gb, sizeof(float*)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_mi, &simSpace.d_mat_index, sizeof(char*)), __LINE__  );
+
 
 	return(retval);
 }
@@ -1006,6 +1004,8 @@ printf("%s\n", __FUNCTION__);
 //	arraySet<<<numBlocks, blockSize>>>(numElements, simSpace.eField.d_x, (float)-4.0);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
+	SimulationSpace_Timestep();
+	SimulationSpace_Timestep();
 	SimulationSpace_Timestep();
 //	retval+= electricField_step();
 
