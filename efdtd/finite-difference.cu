@@ -42,7 +42,7 @@ __constant__ int c_numElements;
 __constant__ float c_delExp;  // coeff used in calculating the efield
 __constant__ float* c_ga;
 __constant__ float* c_gb;
-__constant__ int* c_mi;
+__constant__ char* c_mi;
 
 // stencil coefficients
 __constant__ float c_ax, c_bx, c_cx, c_dx;
@@ -679,7 +679,7 @@ __global__ void iFieldDir_step(T* d_i, T* d_e )
 	int stride = blockDim.x * gridDim.x;
 	for(int i = index; i < c_numElements; i += stride)
 	{
-		int materialIndex = c_mi[i];
+		char materialIndex = c_mi[i];
 		T gb = c_gb[materialIndex];
 		d_i[i] += gb * d_e[i];
 	}
@@ -724,7 +724,7 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	int stride = blockDim.x * gridDim.x;
 	for(int i = index; i < c_numElements; i += stride)
 	{
-		int materialIndex = c_mi[i];
+		char materialIndex = c_mi[i];
 		if(materialIndex>127)
 			materialIndex = 127;
 		if(materialIndex<0)
@@ -849,8 +849,8 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 	int numBlocks = ((numElmnts) + blockSize - 1) / blockSize;
 	arraySet<<<numBlocks, blockSize>>>(128, pSpace->d_ga, (float)1.0);
 
-	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, 128 * sizeof(float)), __LINE__  );
-	retval += checkCuda( cudaMemset(pSpace->d_mat_index, 0, numElmnts*sizeof(char)) , __LINE__  );
+	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, 128 * sizeof(float)), __LINE__  ); // bytes
+	retval += checkCuda( cudaMemset(pSpace->d_mat_index, 0, numElmnts*sizeof(char)) , __LINE__  ); // bytes
 	return(retval);
 }
 
@@ -1006,7 +1006,7 @@ printf("%s\n", __FUNCTION__);
 //	arraySet<<<numBlocks, blockSize>>>(numElements, simSpace.eField.d_x, (float)-4.0);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
-//	SimulationSpace_Timestep();
+	SimulationSpace_Timestep();
 //	retval+= electricField_step();
 
 	// write it back out to view result using openGL tools
