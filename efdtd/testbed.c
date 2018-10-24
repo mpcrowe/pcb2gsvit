@@ -58,11 +58,11 @@ GLfloat lightZeroPosition[] = {0.0, 4.0, -MZ*2.0, 1.0};
 //GLfloat lightZeroColor[] = {0.8, 1.0, 0.8, 1.0}; /* green-tinted */
 GLfloat lightZeroColor[] = {1.0, 1.0, 1.0, 1.0};
 
-GLfloat lightOnePosition[] = {0.0, 0.0, MZ*2.0, 1.0};
+GLfloat lightOnePosition[] = {0.0, 0.0, MZ*5.0, 1.0};
 //GLfloat lightOneColor[] = {0.6, 0.3, 0.2, 1.0}; /* red-tinted */
 GLfloat lightOneColor[] = {1.0, 1.0, 1.0, 1.0}; 
 
-GLfloat lightTwoPosition[] = {MX*2.0, 0.0, 0.0, 1.0};
+GLfloat lightTwoPosition[] = {MX*2.0, MY*2.0, MZ*4.0, 1.0};
 //GLfloat lightOneColor[] = {0.6, 0.3, 0.2, 1.0}; /* red-tinted */
 GLfloat lightTwoColor[] = {1.0, 1.0, 1.0, 1.0}; 
 /* *INDENT-ON* */
@@ -113,7 +113,7 @@ printf("%s\n", __FUNCTION__);
 printf("reading back\n");
 	glNewList(edge, GL_COMPILE);
 //		glShadeModel(GL_FLAT);  // flat shade keeps angular hands from being * * "smoothed" 
-		glPointSize(5);
+		glPointSize(10);
 		glBegin(GL_POINTS);
 		for(i = 0; i < MX; i++)
 		{
@@ -122,6 +122,8 @@ printf("reading back\n");
 				for(k=0;k<MZ;k++)
 				{	// look up the value at the space in the array then convert it to a color
 					int index = MY*MZ*i + MZ*j + k;
+					if( flatSpace[index] == 0 )
+						continue;
 					float val = flatSpace[index];
 //					printf("val %3.1f\n",val);
 					GLfloat color[4];
@@ -216,8 +218,6 @@ extrudeSolidFromPolygon(GLfloat data[][2], unsigned int dataSize, GLdouble thick
 
 void makeDinosaur(void)
 {
-//	extrudeSolidFromPolygon(body, sizeof(body), bodyWidth, BODY_SIDE, BODY_EDGE, BODY_WHOLE);
-//	extrudeSolidFromPolygon(arm, sizeof(arm), bodyWidth / 4, ARM_SIDE, ARM_EDGE, ARM_WHOLE);
 //	extrudeSolidFromPolygon(leg, sizeof(leg), bodyWidth / 2, LEG_SIDE, LEG_EDGE, LEG_WHOLE);
 //	extrudeSolidFromPolygon(eye, sizeof(eye), bodyWidth + 0.2, EYE_SIDE, EYE_EDGE, EYE_WHOLE);
 	makeVolume(BODY_EDGE);
@@ -465,9 +465,9 @@ main(int argc, char **argv)
 	glMatrixMode(GL_PROJECTION);
 	gluPerspective( /* field of view in degree */ 45.0,
 		/* aspect ratio */ 1.0,
-		/* Z near */ 10.0, /* Z far */ (float)2000.0);
+		/* Z near */ 10.0, /* Z far */ (float)500.0);
 	glMatrixMode(GL_MODELVIEW);
-	gluLookAt(0.0, 0.0, (float)MZ*3.0,  /* eye is at (0,0,30) */
+	gluLookAt(0.0, 0.0, (float)MZ*5.0,  /* eye is at (0,0,30) */
 		0.0, 0.0, 0.0,      /* center is at (0,0,0) */
 		0.0, 1.0, 0.);      /* up is in positive Y direction */
 
