@@ -49,19 +49,23 @@ GLfloat eye[][2] = { {8.75, 15}, {9, 14.7}, {9.6, 14.7}, {10.1, 15},
 	{9.6, 15.25}, {9, 15.25} };
 GLfloat skinColor[] = {0.1, 1.0, 0.1, 1.0}, eyeColor[] = {1.0, 0.2, 0.2, 1.0};
 	
-	
-GLfloat lightZeroPosition[] = {0.0, 4.0, -30.0, 1.0};
-//GLfloat lightZeroColor[] = {0.8, 1.0, 0.8, 1.0}; /* green-tinted */
-GLfloat lightZeroColor[] = {1.0, 1.0, 1.0, 1.0};
-
-GLfloat lightOnePosition[] = {0.0, 0.0, 30.0, 1.0};
-//GLfloat lightOneColor[] = {0.6, 0.3, 0.2, 1.0}; /* red-tinted */
-GLfloat lightOneColor[] = {1.0, 1.0, 1.0, 1.0}; 
-/* *INDENT-ON* */
 
 #define MX 176
 #define MY 96
 #define MZ 44
+	
+GLfloat lightZeroPosition[] = {0.0, 4.0, -MZ*2.0, 1.0};
+//GLfloat lightZeroColor[] = {0.8, 1.0, 0.8, 1.0}; /* green-tinted */
+GLfloat lightZeroColor[] = {1.0, 1.0, 1.0, 1.0};
+
+GLfloat lightOnePosition[] = {0.0, 0.0, MZ*2.0, 1.0};
+//GLfloat lightOneColor[] = {0.6, 0.3, 0.2, 1.0}; /* red-tinted */
+GLfloat lightOneColor[] = {1.0, 1.0, 1.0, 1.0}; 
+
+GLfloat lightTwoPosition[] = {MX*2.0, 0.0, 0.0, 1.0};
+//GLfloat lightOneColor[] = {0.6, 0.3, 0.2, 1.0}; /* red-tinted */
+GLfloat lightTwoColor[] = {1.0, 1.0, 1.0, 1.0}; 
+/* *INDENT-ON* */
 #if 0
 GLfloat flatSpace[] = {
 			  0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
@@ -459,9 +463,9 @@ main(int argc, char **argv)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glMatrixMode(GL_PROJECTION);
-	gluPerspective( /* field of view in degree */ 40.0,
+	gluPerspective( /* field of view in degree */ 45.0,
 		/* aspect ratio */ 1.0,
-		/* Z near */ 1.0, /* Z far */ (float)MZ*MAX_VAL);
+		/* Z near */ 10.0, /* Z far */ (float)2000.0);
 	glMatrixMode(GL_MODELVIEW);
 	gluLookAt(0.0, 0.0, (float)MZ*3.0,  /* eye is at (0,0,30) */
 		0.0, 0.0, 0.0,      /* center is at (0,0,0) */
@@ -478,9 +482,12 @@ main(int argc, char **argv)
 
 	glLightfv(GL_LIGHT1, GL_POSITION, lightOnePosition);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, lightOneColor);
+	glLightfv(GL_LIGHT1, GL_POSITION, lightTwoPosition);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, lightTwoColor);
 
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
+	glEnable(GL_LIGHT2);
 
 	glLineWidth(2.0);
 
