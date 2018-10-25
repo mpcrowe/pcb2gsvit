@@ -52,53 +52,53 @@ __constant__ float c_az, c_bz, c_cz, c_dz;
 __constant__ float c_coef_x[9];
 
 
-static int setDerivativeParametersX(int voxels, float scale)
+static int updateDerivativeParametersX(int voxels, float scale)
 {
-	float dsinv = (voxels-1.f)*scale;
+	float delta = (voxels-1.f)*scale;
 	if((voxels % sPencils != 0) )
 	{
                 printf("'len x' must be integral multiples of sPencils %d, %d\n", voxels, sPencils);
                 exit(1);
         }
 
-	float ax =  4.f / 5.f   * dsinv;
-	float bx = -1.f / 5.f   * dsinv;
-	float cx =  4.f / 105.f * dsinv;
-	float dx = -1.f / 280.f * dsinv;
+	float ax =  4.f / 5.f   * delta;
+	float bx = -1.f / 5.f   * delta;
+	float cx =  4.f / 105.f * delta;
+	float dx = -1.f / 280.f * delta;
 	checkCuda( cudaMemcpyToSymbol(c_ax, &ax, sizeof(float)), __LINE__ );
 	checkCuda( cudaMemcpyToSymbol(c_bx, &bx, sizeof(float)), __LINE__  );
 	checkCuda( cudaMemcpyToSymbol(c_cx, &cx, sizeof(float)), __LINE__  );
 	checkCuda( cudaMemcpyToSymbol(c_dx, &dx, sizeof(float)), __LINE__  );
 
 	float coef_x[9];
-	coef_x[0] = (1.f  / 280.f) * dsinv;	// -dx
-	coef_x[1] = (-4.f / 105.f) * dsinv;	// -cx
-	coef_x[2] = (1.f  / 5.f)   * dsinv;	// -bx
-	coef_x[3] = (-4.f / 5.f)   * dsinv;	// -ax
+	coef_x[0] = (1.f  / 280.f) * delta;	// -dx
+	coef_x[1] = (-4.f / 105.f) * delta;	// -cx
+	coef_x[2] = (1.f  / 5.f)   * delta;	// -bx
+	coef_x[3] = (-4.f / 5.f)   * delta;	// -ax
 	coef_x[4] = 0.f;
-	coef_x[5] = (4.f  / 5.f)   * dsinv;	// ax
-	coef_x[6] = (-1.f / 5.f)   * dsinv;	// bx
-	coef_x[7] = (4.f  / 105.f) * dsinv;	// cx
-	coef_x[8] = (-1.f / 280.f) * dsinv;	// dx
+	coef_x[5] = (4.f  / 5.f)   * delta;	// ax
+	coef_x[6] = (-1.f / 5.f)   * delta;	// bx
+	coef_x[7] = (4.f  / 105.f) * delta;	// cx
+	coef_x[8] = (-1.f / 280.f) * delta;	// dx
 	checkCuda( cudaMemcpyToSymbol(c_coef_x, coef_x, 9* sizeof(float)), __LINE__  );
 
 	return (0);
 }
 
 
-static int setDerivativeParametersY(int voxels, float scale)
+static int updateDerivativeParametersY(int voxels, float scale)
 {
-	float dsinv = (voxels-1.f)*scale;
+	float delta = (voxels-1.f)*scale;
 	if((voxels % sPencils != 0) )
 	{
                 printf("'len y' must be integral multiples of sPencils %d, %d\n", voxels, sPencils);
                 exit(1);
         }
 
-	float ay =  4.f / 5.f   * dsinv;
-	float by = -1.f / 5.f   * dsinv;
-	float cy =  4.f / 105.f * dsinv;
-	float dy = -1.f / 280.f * dsinv;
+	float ay =  4.f / 5.f   * delta;
+	float by = -1.f / 5.f   * delta;
+	float cy =  4.f / 105.f * delta;
+	float dy = -1.f / 280.f * delta;
 	checkCuda( cudaMemcpyToSymbol(c_ay, &ay, sizeof(float)), __LINE__  );
 	checkCuda( cudaMemcpyToSymbol(c_by, &by, sizeof(float)), __LINE__  );
 	checkCuda( cudaMemcpyToSymbol(c_cy, &cy, sizeof(float)), __LINE__  );
@@ -109,19 +109,19 @@ static int setDerivativeParametersY(int voxels, float scale)
 }
 
 
-static int setDerivativeParametersZ(int voxels, float scale)
+static int updateDerivativeParametersZ(int voxels, float scale)
 {
-	float dsinv = (voxels-1.f)*scale;
+	float delta = (voxels-1.f)*scale;
 	if((voxels % sPencils != 0) )
 	{
                 printf("'len Z' must be integral multiples of sPencils %d, %d\n", voxels, sPencils);
                 exit(1);
         }
 
-	float az =  4.f / 5.f   * dsinv;
-	float bz = -1.f / 5.f   * dsinv;
-	float cz =  4.f / 105.f * dsinv;
-	float dz = -1.f / 280.f * dsinv;
+	float az =  4.f / 5.f   * delta;
+	float bz = -1.f / 5.f   * delta;
+	float cz =  4.f / 105.f * delta;
+	float dz = -1.f / 280.f * delta;
 	checkCuda( cudaMemcpyToSymbol(c_az, &az,sizeof(float)), __LINE__  );
 	checkCuda( cudaMemcpyToSymbol(c_bz, &bz, sizeof(float)), __LINE__  );
 	checkCuda( cudaMemcpyToSymbol(c_cz, &cz, sizeof(float)), __LINE__  );
@@ -130,40 +130,40 @@ static int setDerivativeParametersZ(int voxels, float scale)
 	return (0);
 }
 
-
+#if 0
 // host routine to set constant data
-extern "C" void setDerivativeParameters()
+extern "C" void updateDerivativeParameters(dim3 size, float dx, float dy, float dz )
 {
-	setDerivativeParametersX(mx, 1.0);
-	setDerivativeParametersY(my, 1.0);
-	setDerivativeParametersZ(mz, 1.0);
-	checkCuda( cudaMemcpyToSymbol(c_mx, &mx, sizeof(int)), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_my, &my, sizeof(int)), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_mz, &mz, sizeof(int)), __LINE__  );
+	updateDerivativeParametersX(size.x, dx);
+	updateDerivativeParametersY(size.y, dy);
+	updateDerivativeParametersZ(size.z, dz);
+	checkCuda( cudaMemcpyToSymbol(c_mx, &size.x, sizeof(int)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_my, &size.y, sizeof(int)), __LINE__  );
+	checkCuda( cudaMemcpyToSymbol(c_mz, &size.z, sizeof(int)), __LINE__  );
 
 	// Execution configurations for small pencil tiles
 
 	// x derivative
-	numBlocks[0][0]  = dim3(my / sPencils, mz, 1);
-	threadsPerBlock[0][0] = dim3(mx, sPencils, 1);
-	numBlocks[0][1]  = dim3(my / sPencils, mz, 1);
-	threadsPerBlock[0][1] = dim3(mx, sPencils, 1);
+	numBlocks[0][0]  = dim3(size.y / sPencils, size.z, 1);
+	threadsPerBlock[0][0] = dim3(size.x, sPencils, 1);
+	numBlocks[0][1]  = dim3(size.y / sPencils, size.z, 1);
+	threadsPerBlock[0][1] = dim3(size.x, sPencils, 1);
 
 	// y derivative
-	numBlocks[1][0]  = dim3(mx / sPencils, mz, 1);
-	threadsPerBlock[1][0] = dim3(sPencils, my, 1);
-	numBlocks[1][1]  = dim3(mx / sPencils, mz, 1);
-	threadsPerBlock[1][1] = dim3(sPencils, my, 1);
+	numBlocks[1][0]  = dim3(size.x / sPencils, size.z, 1);
+	threadsPerBlock[1][0] = dim3(sPencils, size.y, 1);
+	numBlocks[1][1]  = dim3(size.x / sPencils, size.z, 1);
+	threadsPerBlock[1][1] = dim3(sPencils, size.y, 1);
 
 	// z derivative
-	numBlocks[2][0]  = dim3(mx / sPencils, my, 1);
-	threadsPerBlock[2][0] = dim3(sPencils, mz, 1);
-	numBlocks[2][1]  = dim3(mx / sPencils, my, 1);
-	threadsPerBlock[2][1] = dim3(sPencils, mz, 1);
+	numBlocks[2][0]  = dim3(size.x / sPencils, size.y, 1);
+	threadsPerBlock[2][0] = dim3(sPencils, size.z, 1);
+	numBlocks[2][1]  = dim3(size.x / sPencils, size.y, 1);
+	threadsPerBlock[2][1] = dim3(sPencils, size.z, 1);
 }
+#endif
 
-
-extern void FD_Init3dSpaceCos(float* space, int dim, int dim_x, int dim_y, int dim_z, float mag, float freq)
+static void FD_Init3dSpaceCos(float* space, int dim, int dim_x, int dim_y, int dim_z, float mag, float freq)
 {
 	const float twopi = 8.f * (float)atan(1.0);
 
@@ -191,7 +191,7 @@ extern void FD_Init3dSpaceCos(float* space, int dim, int dim_x, int dim_y, int d
 }
 
 
-void initSol(float *sol, int dim)
+static void initSol(float *sol, int dim)
 {
 	const float twopi = 8.f * (float)atan(1.0);
 
@@ -219,7 +219,7 @@ void initSol(float *sol, int dim)
 }
 
 
-void checkResults(double &error, double &maxError, float *sol, float *df)
+static void checkResults(double &error, double &maxError, float *sol, float *df)
 {
 	// error = sqrt(sum((sol-df)**2)/(mx*my*mz))
 	// maxError = maxval(abs(sol-df))
@@ -596,7 +596,7 @@ static void partialX(float* dest, float* src, float scale, dim3 size)
 	dim3 nBlocks_x  = dim3(size.y / sPencils, size.z, 1);
 	dim3 nThreads_x = dim3(size.x, sPencils, 1);
 
-	setDerivativeParametersX(size.x, scale);
+	updateDerivativeParametersX(size.x, scale);
 	derivativeAccumX<<<nBlocks_x,nThreads_x,SHARED_SIZE>>>(dest,src);
 }
 
@@ -606,7 +606,7 @@ static void partialY(float* dest, float* src, float scale, dim3 size)
 	dim3 nBlocks_y = dim3(size.x / sPencils, size.z, 1);
         dim3 nThreads_y = dim3(sPencils, size.y, 1);
 
-	setDerivativeParametersY(size.y, scale);
+	updateDerivativeParametersY(size.y, scale);
 	derivativeAccumY<<<nBlocks_y,nThreads_y,SHARED_SIZE>>>(dest,src);
 }
 
@@ -616,7 +616,7 @@ static void partialZ(float* dest, float* src, float scale, dim3 size)
         dim3 nBlocks_z  = dim3(size.x / sPencils, size.y, 1);
         dim3 nThreads_z = dim3(sPencils, size.z, 1);
 
-	setDerivativeParametersZ(size.z, scale);
+	updateDerivativeParametersZ(size.z, scale);
 	derivativeAccumZ<<<nBlocks_z,nThreads_z,SHARED_SIZE>>>(dest,src);
 }
 
@@ -628,6 +628,7 @@ static void curlAccum(struct vector_field* dest, struct vector_field* src, float
 //printf("%s\n", __FUNCTION__);
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
     	// dHz/dy
+#warning scale factor needs to be divided by delta dimension (dx, dy, or dz)
 	partialY(dest->d_x, src->d_z, scale, size);
     	// -dHy/dz
 	partialZ(dest->d_x, src->d_y, -scale, size);
@@ -975,6 +976,12 @@ extern int FD_zlineInsert(char* zline, int x, int y, int z, int len)
 	retval = checkCuda( cudaMemcpy(ptr, zline, len, cudaMemcpyHostToDevice), __LINE__ );
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);	
 	return(retval);
+}
+
+// updates the material properties table
+extern int FD_UpdateMaterialTable(float dt, )
+{
+
 }
 
 

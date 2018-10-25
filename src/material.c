@@ -193,4 +193,21 @@ int MATRL_StringToCounts(char* pString, double metersPerPixel)
 	
 //	return(-1);
 }
+
+extern float MATRL_Er(int index)
+{
+	if(index >= materialTableSize)
+		return(-1.0f);
+	return( materialTable[index].er);
+}
+
+extern float MATRL_Cond(int index)
+{
+	if(index >= materialTableSize)
+		return(-1.0f);
+	return( materialTable[index].conductivity);
+}
+
+#define MATRL_Ur(index) (materialTable[index].ur)
+#define MATRL_Sus(index) (materialTable[index].sus)
 		
