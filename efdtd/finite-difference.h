@@ -24,5 +24,5 @@ extern int FD_UpdateGa(float* ptr, int len);
 extern int FD_UpdateGb(float* ptr, int len);
 extern int FD_UpdateGc(float* ptr, int len);
 extern int FD_UpdateDelExp(float del_exp);
-
+extern void FD_UpdateDeltas(float dx, float dy, float dz);
 #endif

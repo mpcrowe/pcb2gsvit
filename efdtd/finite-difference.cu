@@ -585,6 +585,9 @@ struct simulation_space
 	float* d_ga;		// relative permittivity (with some time varying things)
 	float* d_gb;		// the conductivity (some time varient 	stuff)
 	float* d_gc;		// the frequency dependant media value
+	float dx;
+	float dy;
+	float dz;
 };
 
 
@@ -630,24 +633,23 @@ static void curlAccum(struct vector_field* dest, struct vector_field* src, float
 //printf("%s\n", __FUNCTION__);
 	//Dx(t+1) = Dx(t)+ (dHz/dy - dHy/dz)
     	// dHz/dy
-#warning scale factor needs to be divided by delta dimension (dx, dy, or dz)
-	partialY(dest->d_x, src->d_z, scale, size);
+	partialY(dest->d_x, src->d_z, scale/simSpace.dy, size);
     	// -dHy/dz
-	partialZ(dest->d_x, src->d_y, -scale, size);
+	partialZ(dest->d_x, src->d_y, -scale/simSpace.dz, size);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
 	//Dy(t+1) = Dy(t)+ (dHx/dz - dHz/dx)
     	// dHx/dz
-	partialZ(dest->d_y, src->d_x, scale, size);
+	partialZ(dest->d_y, src->d_x, scale/simSpace.dz, size);
     	// -dHz/dx
-	partialX(dest->d_y, src->d_z, -scale, size);
+	partialX(dest->d_y, src->d_z, -scale/simSpace.dx, size);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 
 	//Dz(t+1) = Dz(t)+ (dHy/dx - dHx/dy)
     	// dHy/dx
-	partialX(dest->d_z, src->d_y, scale, size);
+	partialX(dest->d_z, src->d_y, scale/simSpace.dx, size);
     	// -dHx/dy
-	partialY(dest->d_z, src->d_x, -scale, size);
+	partialY(dest->d_z, src->d_x, -scale/simSpace.dy, size);
 	checkCuda(cudaDeviceSynchronize(), __LINE__);
 }
 
@@ -831,6 +833,11 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  ); // bytes
 	retval += checkCuda( cudaMemset(pSpace->d_gc, 0, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  ); // bytes
 	retval += checkCuda( cudaMemset(pSpace->d_mat_index, 0, numElmnts*sizeof(char)) , __LINE__  ); // bytes
+
+	pSpace->dx = 1.0f;
+	pSpace->dy = 1.0f;
+	pSpace->dz = 1.0f;
+
 	return(retval);
 }
 
@@ -906,6 +913,8 @@ printf("%s\n", __FUNCTION__);
 	electricField_step();
 	currentField_step();
 	// fixme calculate loss factor used  for freq dependant media
+	// sField update needed here
+	// sField = del_exp*sField + gc*e
 	magneticField_step();
 }
 
@@ -1027,6 +1036,14 @@ extern int FD_UpdateDelExp(float del_exp)
 		return(retval);
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
 	return(retval);
+}
+
+
+extern void FD_UpdateDeltas(float dx, float dy, float dz)
+{
+	simSpace.dx = dx;
+	simSpace.dy = dy;
+	simSpace.dz = dz;
 }
 
 
