@@ -811,7 +811,6 @@ static int VectorField_Malloc(struct vector_field* field, dim3 size)
 }
 
 
-
 // d_ga --> 1/(Er + (sigma*dt/E0) + (chi*dt/t0) )
 // 	where
 //		Er = relative dielectric constant (1-15)
@@ -839,9 +838,9 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 
 	int blockSize = 256;
 	int numBlocks = ((numElmnts) + blockSize - 1) / blockSize;
-	arraySet<<<numBlocks, blockSize>>>(128, pSpace->d_ga, (float)1.0);
+	arraySet<<<numBlocks, blockSize>>>(MAX_SIZE_MATERIAL_TABLE, pSpace->d_ga, (float)1.0);
 
-	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, 128 * sizeof(float)), __LINE__  ); // bytes
+	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  ); // bytes
 	retval += checkCuda( cudaMemset(pSpace->d_mat_index, 0, numElmnts*sizeof(char)) , __LINE__  ); // bytes
 	return(retval);
 }
@@ -878,8 +877,8 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 
 
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_mat_index, numE * sizeof(char))  , __LINE__  );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, 128 * sizeof(float)), __LINE__  );
-	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, 128 * sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  );
 	// put a copy of the pointers into const memory so that the GPU
 	// functions can directly access these spaces
 	retval += checkCuda( cudaMemcpyToSymbol(c_ga, &simSpace.d_ga, sizeof(float*)), __LINE__  );
@@ -962,26 +961,56 @@ extern int SimulationSpace_Destroy(void)
 extern int FD_zlineInsert(char* zline, int x, int y, int z, int len)
 {
 	int retval;
-	char* ptr = simSpace.d_mat_index;
-	if(ptr == NULL)	// if space not initialized return error
-		return(-1);
 	int offset = simSpace.size.y*simSpace.size.z * x + simSpace.size.z * y + z;
 	if( offset > (simSpace.size.x*simSpace.size.y*simSpace.size.z) )
 		return(-2);	// if out of bounds return error
 
-	ptr += offset;
-
-	// sync needed so that zline may be overwritten by CPU after the
-	// Memcpy call
-	retval = checkCuda( cudaMemcpy(ptr, zline, len, cudaMemcpyHostToDevice), __LINE__ );
-	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);	
+	retval = FD_UpdateMatIndex(zline, len, offset);
 	return(retval);
 }
 
-// updates the material properties table
-extern int FD_UpdateMaterialTable(float dt, )
-{
 
+extern int FD_UpdateMatIndex(char* src, int len, int offset)
+{
+	int retval;
+	int num_bytes = len * sizeof(char);
+	char* dest = simSpace.d_mat_index;
+	if(dest == NULL)	// if space not initialized return error
+		return(-1);
+
+	dest+=offset;
+
+	retval = checkCuda( cudaMemcpy( dest, src, num_bytes, cudaMemcpyHostToDevice), __LINE__ );
+	// sync needed because src may be overwritten by CPU after the
+	// cudaMemcpy call
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
+	return(retval);
+}
+
+
+extern int FD_UpdateGa(float* src, int len)
+{
+	int retval;
+	int num_bytes = len;
+	if(len>MAX_SIZE_MATERIAL_TABLE)
+		num_bytes = MAX_SIZE_MATERIAL_TABLE;
+	num_bytes *= sizeof(float);
+	retval = checkCuda( cudaMemcpy( simSpace.d_ga, src, num_bytes, cudaMemcpyHostToDevice), __LINE__ );
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
+	return(retval);
+}
+
+
+extern int FD_UpdateGb(float* src, int len)
+{
+	int retval;
+	int num_bytes = len;
+	if(len>MAX_SIZE_MATERIAL_TABLE)
+		num_bytes = MAX_SIZE_MATERIAL_TABLE;
+	num_bytes *= sizeof(float);
+	retval = checkCuda( cudaMemcpy( simSpace.d_gb, src, num_bytes, cudaMemcpyHostToDevice), __LINE__ );
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
+	return(retval);
 }
 
 

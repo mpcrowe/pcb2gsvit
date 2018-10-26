@@ -208,6 +208,17 @@ extern float MATRL_Cond(int index)
 	return( materialTable[index].conductivity);
 }
 
-#define MATRL_Ur(index) (materialTable[index].ur)
-#define MATRL_Sus(index) (materialTable[index].sus)
-		
+extern float MATRL_Ur(int index)
+{
+	if(index >= materialTableSize)
+		return(-1.0f);
+	return( materialTable[index].ur);
+}
+
+extern float MATRL_Sus(int index)
+{
+	if(index >= materialTableSize)
+		return(-1.0f);
+	return( materialTable[index].sus);
+}
+
