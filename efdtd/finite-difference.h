@@ -22,5 +22,7 @@ extern int FD_Testbed(void* image, int sx, int sy, int sz);
 extern int FD_UpdateMatIndex(char* src, int len, int offset);
 extern int FD_UpdateGa(float* ptr, int len);
 extern int FD_UpdateGb(float* ptr, int len);
+extern int FD_UpdateGc(float* ptr, int len);
+extern int FD_UpdateDelExp(float del_exp);
 
 #endif

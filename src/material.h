@@ -30,6 +30,8 @@ double MATRL_ScaleToMeters(double val, char* units);
 
 extern float MATRL_Er(int index);
 extern float MATRL_Ur(int index);
+extern float MATRL_Chi(int index);
+extern float MATRL_T0(int index);
 extern float MATRL_Cond(int index);
 extern float MATRL_Sus(int index);
 

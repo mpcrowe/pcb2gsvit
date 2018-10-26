@@ -208,6 +208,25 @@ extern float MATRL_Cond(int index)
 	return( materialTable[index].conductivity);
 }
 
+// part of Debye formulation of a frequency dependant lossy media
+// return 0 until we know how to compute this loss factor
+extern float MATRL_Chi(int index)
+{
+	if(index >= materialTableSize)
+		return(-1.0f);
+	return( 0.0f);
+}
+
+// part of Debye formulation of a frequency dependant lossy media
+// return 1 until we know how to compute this time constant, but is the -3dB point of the
+// media we are characterizing
+extern float MATRL_T0(int index)
+{
+	if(index >= materialTableSize)
+		return(-1.0f);
+	return( 1.0f);
+}
+
 extern float MATRL_Ur(int index)
 {
 	if(index >= materialTableSize)

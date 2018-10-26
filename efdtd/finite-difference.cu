@@ -42,6 +42,7 @@ __constant__ int c_numElements;
 __constant__ float c_delExp;  // coeff used in calculating the efield
 __constant__ float* c_ga;
 __constant__ float* c_gb;
+__constant__ float* c_gc;
 __constant__ char* c_mi;
 
 // stencil coefficients
@@ -583,6 +584,7 @@ struct simulation_space
 	char* d_mat_index;	//
 	float* d_ga;		// relative permittivity (with some time varying things)
 	float* d_gb;		// the conductivity (some time varient 	stuff)
+	float* d_gc;		// the frequency dependant media value
 };
 
 
@@ -728,19 +730,18 @@ __global__ void eFieldDir_step(T* d_e, T* d_d, T* d_i, T* d_s )
 	}
 }
 
-
+float local_del_exp = 0.0f;
 static int electricField_step(void)
 {
 	int retval = 0;
 	int bytes = simSpace.size.x * simSpace.size.y * simSpace.size.z * sizeof(float);
         int blockSize = 256;
         int numBlocks = ((bytes/sizeof(float)) + blockSize - 1) / blockSize;
-	float del_exp = 7.0f;
 //printf("%s numBlocks%d, blockSize:%d\n", __FUNCTION__, numBlocks, blockSize);
 
 	// fixme these remain constant through out simulation, move to a
 	// better spot in initialization
-	retval += checkCuda( cudaMemcpyToSymbol(c_delExp, &del_exp, sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_delExp, &local_del_exp, sizeof(float)), __LINE__  );
 	if(retval)
 		return(retval);
 
@@ -811,19 +812,6 @@ static int VectorField_Malloc(struct vector_field* field, dim3 size)
 }
 
 
-// d_ga --> 1/(Er + (sigma*dt/E0) + (chi*dt/t0) )
-// 	where
-//		Er = relative dielectric constant (1-15)
-//		sigma = conductivity (S/m)
-//		dt = timestep size (sec)
-//		E0 = Absolute dielectric constant
-//		chi = a dissapation factor related to the lossyness of the
-//			dielectric
-//		t0 = time constant representing the cut off frequency of the
-// 			lossy dielectric (sec)
-// d_gb --> sigma*dt/E0
-// d_gbc --> chi*dt/t0
-// del_exp = exp^(-dt/t0)
 static int SimulationSpace_Reset( struct simulation_space* pSpace)
 {
 	int retval = 0;
@@ -841,6 +829,7 @@ static int SimulationSpace_Reset( struct simulation_space* pSpace)
 	arraySet<<<numBlocks, blockSize>>>(MAX_SIZE_MATERIAL_TABLE, pSpace->d_ga, (float)1.0);
 
 	retval += checkCuda( cudaMemset(pSpace->d_gb, 0, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  ); // bytes
+	retval += checkCuda( cudaMemset(pSpace->d_gc, 0, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  ); // bytes
 	retval += checkCuda( cudaMemset(pSpace->d_mat_index, 0, numElmnts*sizeof(char)) , __LINE__  ); // bytes
 	return(retval);
 }
@@ -879,10 +868,12 @@ static int SimulationSpace_CreateDim(dim3* sim_size, struct simulation_space* pS
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_mat_index, numE * sizeof(char))  , __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_ga, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  );
 	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gb, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  );
+	retval += checkCuda( cudaMalloc((void**)&pSpace->d_gc, MAX_SIZE_MATERIAL_TABLE * sizeof(float)), __LINE__  );
 	// put a copy of the pointers into const memory so that the GPU
 	// functions can directly access these spaces
 	retval += checkCuda( cudaMemcpyToSymbol(c_ga, &simSpace.d_ga, sizeof(float*)), __LINE__  );
 	retval += checkCuda( cudaMemcpyToSymbol(c_gb, &simSpace.d_gb, sizeof(float*)), __LINE__  );
+	retval += checkCuda( cudaMemcpyToSymbol(c_gc, &simSpace.d_gc, sizeof(float*)), __LINE__  );
 	retval += checkCuda( cudaMemcpyToSymbol(c_mi, &simSpace.d_mat_index, sizeof(char*)), __LINE__  );
 
 
@@ -901,6 +892,7 @@ static int SimulationSpace_DestroyDim(struct simulation_space* pSpace)
 	retval += checkCuda( cudaFree(pSpace->d_mat_index), __LINE__  );
 	retval += checkCuda( cudaFree(pSpace->d_ga), __LINE__  );
 	retval += checkCuda( cudaFree(pSpace->d_gb), __LINE__  );
+	retval += checkCuda( cudaFree(pSpace->d_gc), __LINE__  );
 	return(retval);
 }
 
@@ -913,7 +905,7 @@ printf("%s\n", __FUNCTION__);
 	fluxDensity_step();
 	electricField_step();
 	currentField_step();
-
+	// fixme calculate loss factor used  for freq dependant media
 	magneticField_step();
 }
 
@@ -1009,6 +1001,30 @@ extern int FD_UpdateGb(float* src, int len)
 		num_bytes = MAX_SIZE_MATERIAL_TABLE;
 	num_bytes *= sizeof(float);
 	retval = checkCuda( cudaMemcpy( simSpace.d_gb, src, num_bytes, cudaMemcpyHostToDevice), __LINE__ );
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
+	return(retval);
+}
+
+
+extern int FD_UpdateGc(float* src, int len)
+{
+	int retval;
+	int num_bytes = len;
+	if(len>MAX_SIZE_MATERIAL_TABLE)
+		num_bytes = MAX_SIZE_MATERIAL_TABLE;
+	num_bytes *= sizeof(float);
+	retval = checkCuda( cudaMemcpy( simSpace.d_gc, src, num_bytes, cudaMemcpyHostToDevice), __LINE__ );
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
+	return(retval);
+}
+
+extern int FD_UpdateDelExp(float del_exp)
+{
+	int retval;
+	local_del_exp = del_exp;
+	retval = checkCuda( cudaMemcpyToSymbol(c_delExp, &del_exp, sizeof(float)), __LINE__  );
+	if(retval)
+		return(retval);
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__); 
 	return(retval);
 }
