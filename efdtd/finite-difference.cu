@@ -781,6 +781,39 @@ __global__ void arraySet(int n, T* ptr, T val)
 }
 
 
+template <typename T>
+__global__ void extrudeZ(T* dest, T* src, dim3 srcSize, int offX, int offY, int startZ, int endZ, T maskVal)
+{
+	int i  = blockIdx.x*blockDim.x + threadIdx.x;
+	int j  = blockIdx.y*blockDim.y + threadIdx.y;
+//	int k  = threadIdx.y;
+//	int globalIdx = k * c_mx * c_my + (j+offY) * c_mx + (i+offX);
+	int globalIdx =  (j+offY) * c_mx + (i+offX);
+
+	int index = i*srcSize.y + j;
+	int stride = blockDim.x * gridDim.x;
+	
+	T val = src[index];
+	if(val !=maskVal)
+	{
+		for (int k = startZ; k<endZ; k++)
+		{
+			int dest_index = k*c_mx*c_my + globalIdx;
+			dest[dest_index] = val;
+		}
+	}
+}
+
+
+extern int SimulationSpace_ExtrudeZCyl(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int Zend)
+{
+	// move src into GPU space
+	// compute offset from dim and center
+	//compute number of blocks and threads to cover space
+	// insert into materials matrrix using maskVal = 0
+	return(0);
+}
+
 static int VectorField_Zero(struct vector_field* field, dim3 size)
 {
 	int retval = 0;
