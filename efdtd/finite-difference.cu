@@ -782,36 +782,68 @@ __global__ void arraySet(int n, T* ptr, T val)
 
 
 template <typename T>
-__global__ void extrudeZ(T* dest, T* src, dim3 srcSize, int offX, int offY, int startZ, int endZ, T maskVal)
+__global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T maskVal)
 {
 	int i  = blockIdx.x*blockDim.x + threadIdx.x;
 	int j  = blockIdx.y*blockDim.y + threadIdx.y;
-//	int k  = threadIdx.y;
-//	int globalIdx = k * c_mx * c_my + (j+offY) * c_mx + (i+offX);
-	int globalIdx =  (j+offY) * c_mx + (i+offX);
 
-	int index = i*srcSize.y + j;
-	int stride = blockDim.x * gridDim.x;
-	
-	T val = src[index];
+	if((i<srcSize.x) && (j<srcSize.y))
+	{
+	int srcIndex = i*srcSize.y + j;
+	T val = src[srcIndex];
 	if(val !=maskVal)
 	{
-		for (int k = startZ; k<endZ; k++)
+		int count = zLen;
+		int globalIdx =  (j+offset.y)*c_mx + (i+offset.x);
+		T* ptr = &dest[globalIdx];
+		while(count--)
 		{
-			int dest_index = k*c_mx*c_my + globalIdx;
-			dest[dest_index] = val;
+			*ptr++ = val;
 		}
+	}
 	}
 }
 
 
-extern int SimulationSpace_ExtrudeZCyl(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int Zend)
+extern int SimulationSpace_ExtrudeZCyl(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd)
 {
+	int retval = 0;
+	char* d_src;
+	int numBytes = xDim * yDim * sizeof(char);
+
 	// move src into GPU space
+        retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
+	retval += checkCuda( cudaMemcpy( d_src, src, numBytes, cudaMemcpyHostToDevice), __LINE__);
+
+
 	// compute offset from dim and center
 	//compute number of blocks and threads to cover space
+	dim3 offset;
+	offset.x = xDim/2+xCenter;
+	offset.y = yDim/2+yCenter;
+	offset.z = zStart;
+	int zLen = zEnd-zStart;
+
+	dim3 blockSize(xDim, yDim);
+        dim3 numBlocks(1,1);
+
+
 	// insert into materials matrrix using maskVal = 0
-	return(0);
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+        extrudeZ<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, zLen, (char)0);
+
+
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+	// cleanup
+	retval += checkCuda( cudaFree(d_src), __LINE__  );
+  
+	return(retval);
 }
 
 static int VectorField_Zero(struct vector_field* field, dim3 size)
