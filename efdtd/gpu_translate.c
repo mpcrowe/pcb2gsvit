@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <glib.h>  // for  using GList
 #include <math.h>
+#include <string.h>
 
 #include "../src/material.h"
 #include "finite-difference.h"
@@ -120,4 +121,33 @@ extern int GT_UpdateMaterialTable(float dt  )
     return(0);
 
 
+}
+
+
+extern void GT_makeVia(int xCenter, int yCenter, int od, int id, int start, int end, char matIndex)
+{
+	int size = (od+1)*(od+1)*sizeof(char);
+	char* pTemplate = (char*)malloc(size);
+	memset(pTemplate,0,size);
+	int r;
+	for(r=id/2; r<od/2; r++)
+	{
+		int x;
+		int xOff = r;
+		int yOff = r;
+		for(x=-r; x<=r; x++)
+		{
+			float xn = (float)x/(float)r;
+			float theta = acos(xn);
+			float yf = (float)r * sin(theta);
+			int y= yf;
+			int index = (x+xOff)*od+(y+yOff);
+			pTemplate[index] = matIndex;
+			index = (x+xOff)*od+(-y+yOff);
+			pTemplate[index] = matIndex;
+		}
+	}
+//	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
+	SimulationSpace_ExtrudeZCyl(pTemplate, od+1, od+1, xCenter, yCenter, start, end );
+	free(pTemplate);	
 }
