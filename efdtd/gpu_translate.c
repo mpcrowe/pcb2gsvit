@@ -140,6 +140,7 @@ extern void GT_makeVia(int xCenter, int yCenter, int od, int id, int start, int 
 			float xn = (float)x/(float)r;
 			float theta = acos(xn);
 			float yf = (float)r * sin(theta);
+			// better sqrt(r*r-x*x);
 			int y= yf;
 			int index = (x+xOff)*od+(y+yOff);
 			pTemplate[index] = matIndex;
