@@ -11,6 +11,7 @@
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 #include <glib.h>  // for  using GList
+#include <string.h>
 
 #include "../src/xpu.h"
 #include "../src/xpathConsts.h"
@@ -226,4 +227,34 @@ processingFault:
 	return(retval);
 }
 
-
+extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int start, int end, char matIndex)
+{
+	int rowSize = outerRadius*2+1;
+	int colSize = rowSize;	// circles are round, but ExtrudeZ doesn't care
+	int size = rowSize*colSize*sizeof(char);
+	char* pTemplate = (char*)malloc(size);
+	memset(pTemplate,0,size);
+	int r;
+	for(r=innerRadius; r<outerRadius; r++)
+	{
+		int x;
+		int xOff = r;
+		int yOff = r;
+		for(x=0; x<=r; x++)
+		{
+			int y = (int)(sqrt(r*r-x*x)+0.5);
+			// compute for one quadrant, apply to four quadrants
+			int index = (x+xOff)*rowSize + (y+yOff);
+			pTemplate[index] = matIndex;
+			index = (x+xOff)*rowSize + (-y+yOff);
+			pTemplate[index] = matIndex;
+			index = (-x+xOff)*rowSize + (y+yOff);
+			pTemplate[index] = matIndex;
+			index = (-x+xOff)*rowSize + (-y+yOff);
+			pTemplate[index] = matIndex;
+		}
+	}
+//	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
+	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, start, end );
+	free(pTemplate);	
+}

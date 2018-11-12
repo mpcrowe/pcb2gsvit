@@ -109,6 +109,8 @@ void makeVolume(GLuint edge)
 //	FD_Init3dSpaceCos(flatSpace, 2, MX, MY, MZ, 5.0f, 1.2f );
 	FP_ReadRiff("../test1/medLin.riff");
 printf("%s\n", __FUNCTION__);
+//extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int start, int end, char matIndex)
+	FP_MakeVia(15,20, 8,4, 2, 15, 1);
 	FD_Testbed(flatSpace, MX, MY, MZ);
 printf("reading back\n");
 	glNewList(edge, GL_COMPILE);
