@@ -805,7 +805,7 @@ __global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T
 }
 
 
-extern int SimulationSpace_ExtrudeZCyl(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd)
+extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd)
 {
 	int retval = 0;
 	char* d_src;

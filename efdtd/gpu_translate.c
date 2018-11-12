@@ -124,31 +124,34 @@ extern int GT_UpdateMaterialTable(float dt  )
 }
 
 
-extern void GT_makeVia(int xCenter, int yCenter, int od, int id, int start, int end, char matIndex)
+extern void GT_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int start, int end, char matIndex)
 {
-	int size = (od+1)*(od+1)*sizeof(char);
+	int rowSize = outerRadius*2+1;
+	int colSize = rowSize;	// circles are round, but ExtrudeZ doesn't care
+	int size = rowSize*colSize*sizeof(char);
 	char* pTemplate = (char*)malloc(size);
 	memset(pTemplate,0,size);
 	int r;
-	for(r=id/2; r<od/2; r++)
+	for(r=innerRadius; r<outerRadius; r++)
 	{
 		int x;
 		int xOff = r;
 		int yOff = r;
-		for(x=-r; x<=r; x++)
+		for(x=0; x<=r; x++)
 		{
-			float xn = (float)x/(float)r;
-			float theta = acos(xn);
-			float yf = (float)r * sin(theta);
-			// better sqrt(r*r-x*x);
-			int y= yf;
-			int index = (x+xOff)*od+(y+yOff);
+			int y = (int)(sqrt(r*r-x*x)+0.5);
+			// compute for one quadrant, apply to four quadrants
+			int index = (x+xOff)*rowSize + (y+yOff);
 			pTemplate[index] = matIndex;
-			index = (x+xOff)*od+(-y+yOff);
+			index = (x+xOff)*rowSize + (-y+yOff);
+			pTemplate[index] = matIndex;
+			index = (-x+xOff)*rowSize + (y+yOff);
+			pTemplate[index] = matIndex;
+			index = (-x+xOff)*rowSize + (-y+yOff);
 			pTemplate[index] = matIndex;
 		}
 	}
 //	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
-	SimulationSpace_ExtrudeZCyl(pTemplate, od+1, od+1, xCenter, yCenter, start, end );
+	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, start, end );
 	free(pTemplate);	
 }
