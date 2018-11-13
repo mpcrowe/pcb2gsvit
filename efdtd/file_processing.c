@@ -234,28 +234,47 @@ extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadiu
 	int size = rowSize*colSize*sizeof(char);
 	char* pTemplate = (char*)malloc(size);
 	memset(pTemplate,0,size);
-	int r;
-	for(r=innerRadius; r<outerRadius; r++)
+	int i;
+	int j;
+	for(i=0;i<=rowSize/2;i++)
 	{
-		int x;
-		int xOff = outerRadius;
-		int yOff = outerRadius;
-		for(x=0; x<=r; x++)
+		for(j=0;j<=colSize/2;j++)
 		{
-			int y = (int)(sqrt(r*r-x*x)+0.5);
-			// compute for one quadrant, apply to four quadrants
-			int index = (x+xOff)*rowSize + (y+yOff);
-			pTemplate[index] = matIndex;
-			printf("%d, %d, %d\n", (x+xOff), (y+yOff), index);
-			index = (x+xOff)*rowSize + (-y+yOff);
-			pTemplate[index] = matIndex;
-			index = (-x+xOff)*rowSize + (y+yOff);
-			pTemplate[index] = matIndex;
-			index = (-x+xOff)*rowSize + (-y+yOff);
-			pTemplate[index] = matIndex;
-		}
+			int r;
+			r = sqrt(i*i+j*j)+0.5;
+			if(r>=innerRadius && r<=outerRadius)
+			{
+			
+				int x = i;
+				int y = j;
+				int xOff = outerRadius;
+				int yOff = outerRadius;
+				// compute for one quadrant, apply to four quadrants
+				int index = (x+xOff) + (y+yOff)*rowSize;
+				pTemplate[index] = matIndex;
+				index = (x+xOff) + (-y+yOff)*rowSize;
+				pTemplate[index] = matIndex;
+				index = (-x+xOff) + (y+yOff)*rowSize;
+				pTemplate[index] = matIndex;
+				index = (-x+xOff) + (-y+yOff)*rowSize;
+				pTemplate[index] = matIndex;
+			}
+		}			
 	}
+#if 0
+	printf("rowSize: %d\n",rowSize);
+	for(i=0;i<size;i++)
+	{
+		if(pTemplate[i])
+			printf("X");
+		else
+			printf(".");
+		if(i%rowSize==rowSize-1)
+			printf("\n");
+	}
+#endif
 //	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
 	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, start, end );
 	free(pTemplate);	
 }
+
