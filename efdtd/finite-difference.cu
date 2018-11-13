@@ -784,27 +784,19 @@ __global__ void arraySet(int n, T* ptr, T val)
 template <typename T>
 __global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T maskVal)
 {
-	int i  = blockIdx.x*blockDim.x + threadIdx.x;
-	int j  = blockIdx.y*blockDim.y + threadIdx.y;
+	int i   = threadIdx.x;
+	int j   = blockIdx.x*blockDim.y + threadIdx.y;
+	int srcIndex = i*blockDim.y + j;
 
-	if((i<srcSize.x) && (j<srcSize.y))
+	T val = src[srcIndex];
+	if(val !=maskVal)
 	{
-		int srcIndex = i*srcSize.y + j;
-		T val = src[srcIndex];
-		if(val !=maskVal)
+		int count = zLen;
+		int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+		T* ptr = &dest[globalIdx];
+		while(count--)
 		{
-			int count = zLen;
-			count = 1;
-
-//			int globalIdx = (i+offset.x)*c_my*c_mz + (j+offset.y)*c_mz + offset.z;
-			int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
-
-			T* ptr = &dest[globalIdx];
-			while(count--)
-			{
-				*ptr++ = val;
-//				ptr += c_mx*c_my;
-			}
+			*ptr++ = val;
 		}
 	}
 }
@@ -831,7 +823,8 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 
 	dim3 blockSize(xDim, yDim);
         dim3 numBlocks(1,1);
-
+//printf("dim %d, %d\n", blockSize.x, blockSize.y);
+//printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
 
 	// insert into materials matrrix using maskVal = 0
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);

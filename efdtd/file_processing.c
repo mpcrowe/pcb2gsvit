@@ -236,6 +236,7 @@ extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadiu
 	memset(pTemplate,0,size);
 	int i;
 	int j;
+	char airIndex = 3;
 	for(i=0;i<=rowSize/2;i++)
 	{
 		for(j=0;j<=colSize/2;j++)
@@ -258,6 +259,23 @@ extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadiu
 				pTemplate[index] = matIndex;
 				index = (-x+xOff) + (-y+yOff)*rowSize;
 				pTemplate[index] = matIndex;
+			}
+			else if(r<innerRadius)
+			{
+			
+				int x = i;
+				int y = j;
+				int xOff = outerRadius;
+				int yOff = outerRadius;
+				// compute for one quadrant, apply to four quadrants
+				int index = (x+xOff) + (y+yOff)*rowSize;
+				pTemplate[index] = airIndex;
+				index = (x+xOff) + (-y+yOff)*rowSize;
+				pTemplate[index] = airIndex;
+				index = (-x+xOff) + (y+yOff)*rowSize;
+				pTemplate[index] = airIndex;
+				index = (-x+xOff) + (-y+yOff)*rowSize;
+				pTemplate[index] = airIndex;
 			}
 		}			
 	}
