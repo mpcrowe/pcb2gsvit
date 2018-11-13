@@ -789,18 +789,23 @@ __global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T
 
 	if((i<srcSize.x) && (j<srcSize.y))
 	{
-	int srcIndex = i*srcSize.y + j;
-	T val = src[srcIndex];
-	if(val !=maskVal)
-	{
-		int count = zLen;
-		int globalIdx =  (j+offset.y)*c_mx + (i+offset.x);
-		T* ptr = &dest[globalIdx];
-		while(count--)
+		int srcIndex = i*srcSize.y + j;
+		T val = src[srcIndex];
+		if(val !=maskVal)
 		{
-			*ptr++ = val;
+			int count = zLen;
+			count = 1;
+
+//			int globalIdx = (i+offset.x)*c_my*c_mz + (j+offset.y)*c_mz + offset.z;
+			int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+
+			T* ptr = &dest[globalIdx];
+			while(count--)
+			{
+				*ptr++ = val;
+//				ptr += c_mx*c_my;
+			}
 		}
-	}
 	}
 }
 
@@ -819,8 +824,8 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 	// compute offset from dim and center
 	//compute number of blocks and threads to cover space
 	dim3 offset;
-	offset.x = xDim/2+xCenter;
-	offset.y = yDim/2+yCenter;
+	offset.x = xCenter+xDim/2;
+	offset.y = yCenter+yDim/2;
 	offset.z = zStart;
 	int zLen = zEnd-zStart;
 
@@ -993,8 +998,7 @@ extern int SimulationSpace_Create(dim3* sim_size)
 	int bytes = sim_size->x * sim_size->y * sim_size->x * sizeof(float);
 	if(spaceInitialized != 0)
 	{
-		fprintf(stderr, "%s Warning space alreaded allocated as (%d, %d, %d)\n",__FUNCTION__,
-simSpace.size.x,simSpace.size.y,simSpace.size.z);
+		fprintf(stderr, "%s Warning space alreaded allocated as (%d, %d, %d)\n",__FUNCTION__,simSpace.size.x,simSpace.size.y,simSpace.size.z);
 		return(retval);
 	}
 
@@ -1120,7 +1124,7 @@ extern int FD_Testbed(void* image, int sx, int sy, int sz)
 //	int blockSize = 256;
 //        int numBlocks = ((numElements) + blockSize - 1) / blockSize;
 //	float* d_image;
-	// allocate a space to copy test data into, and copy it in
+// allocate a space to copy test data into, and copy it in
 //        retval += checkCuda( cudaMalloc((void**)&d_image, bytes), __LINE__  );
 //	retval += checkCuda( cudaMemcpy(d_image, image, bytes, cudaMemcpyHostToDevice), __LINE__  );
 printf("%s\n", __FUNCTION__);

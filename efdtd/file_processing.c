@@ -238,14 +238,15 @@ extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadiu
 	for(r=innerRadius; r<outerRadius; r++)
 	{
 		int x;
-		int xOff = r;
-		int yOff = r;
+		int xOff = outerRadius;
+		int yOff = outerRadius;
 		for(x=0; x<=r; x++)
 		{
 			int y = (int)(sqrt(r*r-x*x)+0.5);
 			// compute for one quadrant, apply to four quadrants
 			int index = (x+xOff)*rowSize + (y+yOff);
 			pTemplate[index] = matIndex;
+			printf("%d, %d, %d\n", (x+xOff), (y+yOff), index);
 			index = (x+xOff)*rowSize + (-y+yOff);
 			pTemplate[index] = matIndex;
 			index = (-x+xOff)*rowSize + (y+yOff);
