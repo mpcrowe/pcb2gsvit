@@ -802,7 +802,7 @@ __global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T
 }
 
 
-extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd)
+extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
 {
 	int retval = 0;
 	char* d_src;
@@ -819,7 +819,6 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 	offset.x = xCenter+xDim/2;
 	offset.y = yCenter+yDim/2;
 	offset.z = zStart;
-	int zLen = zEnd-zStart;
 
 	dim3 blockSize(xDim, yDim);
         dim3 numBlocks(1,1);

@@ -227,7 +227,7 @@ processingFault:
 	return(retval);
 }
 
-extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int start, int end, char matIndex)
+extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int zStart, int zLen, char matIndex)
 {
 	int rowSize = outerRadius*2+1;
 	int colSize = rowSize;	// circles are round, but ExtrudeZ doesn't care
@@ -292,7 +292,19 @@ extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadiu
 	}
 #endif
 //	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
-	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, start, end );
+	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, zStart, zLen );
+	free(pTemplate);	
+}
+
+extern void FP_MakeRectangleZ(int xCenter, int yCenter, int xLen, int yLen, int zStart, int zLen, char matIndex)
+{
+	int rowSize = xLen;
+	int colSize = yLen;
+	int size = rowSize*colSize*sizeof(char);
+	char* pTemplate = (char*)malloc(size);
+	memset(pTemplate,matIndex,size);
+//	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
+	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, zStart, zLen );
 	free(pTemplate);	
 }
 
