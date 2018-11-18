@@ -832,6 +832,129 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 
         extrudeZ<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, zLen, (char)0);
 
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+	// cleanup
+	retval += checkCuda( cudaFree(d_src), __LINE__  );
+  
+	return(retval);
+}
+
+template <typename T>
+__global__ void extrudeY(T* dest, T* src, dim3 srcSize, dim3 offset, int yLen, T maskVal)
+{
+	int i   = threadIdx.x;
+	int j   = blockIdx.x*blockDim.y + threadIdx.y;
+	int srcIndex = i*blockDim.y + j;
+
+	T val = src[srcIndex];
+	if(val !=maskVal)
+	{
+		int count = yLen;
+		int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+		T* ptr = &dest[globalIdx];
+		while(count--)
+		{
+			*ptr = val;
+			ptr += c_mz;
+		}
+	}
+}
+
+
+extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, int zCenter, int yStart, int yLen)
+{
+	int retval = 0;
+	char* d_src;
+	int numBytes = xDim * zDim * sizeof(char);
+
+	// move src into GPU space
+        retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
+	retval += checkCuda( cudaMemcpy( d_src, src, numBytes, cudaMemcpyHostToDevice), __LINE__);
+
+
+	// compute offset from dim and center
+	//compute number of blocks and threads to cover space
+	dim3 offset;
+	offset.x = xCenter+xDim/2;
+	offset.z = zCenter+zDim/2;
+	offset.y = yStart;
+
+	dim3 blockSize(xDim, zDim);
+        dim3 numBlocks(1,1);
+//printf("dim %d, %d\n", blockSize.x, blockSize.y);
+//printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
+
+	// insert into materials matrrix using maskVal = 0
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+        extrudeY<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, yLen, (char)0);
+
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+	// cleanup
+	retval += checkCuda( cudaFree(d_src), __LINE__  );
+  
+	return(retval);
+}
+
+
+template <typename T>
+__global__ void extrudeX(T* dest, T* src, dim3 srcSize, dim3 offset, int xLen, T maskVal)
+{
+	int i   = threadIdx.x;
+	int j   = blockIdx.x*blockDim.y + threadIdx.y;
+	int srcIndex = i*blockDim.y + j;
+
+	T val = src[srcIndex];
+	if(val !=maskVal)
+	{
+		int count = xLen;
+		int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+		T* ptr = &dest[globalIdx];
+		while(count--)
+		{
+			*ptr = val;
+			ptr += c_my * c_mz;
+		}
+	}
+}
+
+extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, int zCenter, int xStart, int xLen)
+{
+	int retval = 0;
+	char* d_src;
+	int numBytes = yDim * zDim * sizeof(char);
+
+	// move src into GPU space
+        retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
+	retval += checkCuda( cudaMemcpy( d_src, src, numBytes, cudaMemcpyHostToDevice), __LINE__);
+
+
+	// compute offset from dim and center
+	//compute number of blocks and threads to cover space
+	dim3 offset;
+	offset.y = yCenter+yDim/2;
+	offset.z = zCenter+zDim/2;
+	offset.x = xStart;
+
+	dim3 blockSize(yDim, zDim);
+        dim3 numBlocks(1,1);
+//printf("dim %d, %d\n", blockSize.x, blockSize.y);
+//printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
+
+	// insert into materials matrrix using maskVal = 0
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	if(retval)
+		return(retval);
+
+        extrudeX<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, xLen, (char)0);
 
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)

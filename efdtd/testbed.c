@@ -112,7 +112,11 @@ printf("%s\n", __FUNCTION__);
 //extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int start, int end, char matIndex)
 // 132 65 7 132 65 21
 	FP_MakeVia(132,65, 2,1, 7, 14, 1);
-	FP_MakeRectangleZ(50,10, 10,30, 7, 24, 1);
+
+//	extern void FP_MakeRectangleX(int yCenter, int zCenter, int yLen, int zLen, int xStart, int xLen, char matIndex);
+	FP_MakeRectangleX(50,35, 30,10, 15, 60, 3);
+//	FP_MakeRectangleY(50,30, 30,10, 7, 24, 4);
+//	FP_MakeRectangleZ(50,10, 10,30, 7, 24, 2);
 	FD_Testbed(flatSpace, MX, MY, MZ);
 printf("reading back\n");
 	glNewList(edge, GL_COMPILE);

@@ -296,6 +296,32 @@ extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadiu
 	free(pTemplate);	
 }
 
+extern void FP_MakeRectangleX(int yCenter, int zCenter, int yLen, int zLen, int xStart, int xLen, char matIndex)
+{
+	int rowSize = yLen;
+	int colSize = zLen;
+	int size = rowSize*colSize*sizeof(char);
+	char* pTemplate = (char*)malloc(size);
+	memset(pTemplate,matIndex,size);
+//	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
+	SimulationSpace_ExtrudeX(pTemplate, rowSize, colSize, yCenter, zCenter, xStart, xLen );
+	free(pTemplate);	
+}
+
+
+extern void FP_MakeRectangleY(int xCenter, int zCenter, int xLen, int zLen, int yStart, int yLen, char matIndex)
+{
+	int rowSize = xLen;
+	int colSize = zLen;
+	int size = rowSize*colSize*sizeof(char);
+	char* pTemplate = (char*)malloc(size);
+	memset(pTemplate,matIndex,size);
+//	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
+	SimulationSpace_ExtrudeY(pTemplate, rowSize, colSize, xCenter, zCenter, yStart, yLen );
+	free(pTemplate);	
+}
+
+
 extern void FP_MakeRectangleZ(int xCenter, int yCenter, int xLen, int yLen, int zStart, int zLen, char matIndex)
 {
 	int rowSize = xLen;
