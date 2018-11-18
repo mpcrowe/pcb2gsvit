@@ -853,7 +853,10 @@ __global__ void extrudeY(T* dest, T* src, dim3 srcSize, dim3 offset, int yLen, T
 	if(val !=maskVal)
 	{
 		int count = yLen;
-		int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+		int x = i+offset.x;
+		int y = offset.y;
+		int z = j+offset.z;
+		int globalIdx = c_my*c_mz*x + c_mz*y + z;
 		T* ptr = &dest[globalIdx];
 		while(count--)
 		{
@@ -916,7 +919,10 @@ __global__ void extrudeX(T* dest, T* src, dim3 srcSize, dim3 offset, int xLen, T
 	if(val !=maskVal)
 	{
 		int count = xLen;
-		int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+		int x = offset.x;
+		int y = i+offset.y;
+		int z = j+offset.z;
+		int globalIdx = c_my*c_mz*x + c_mz*y + z;
 		T* ptr = &dest[globalIdx];
 		while(count--)
 		{

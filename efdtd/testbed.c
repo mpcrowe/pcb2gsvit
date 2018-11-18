@@ -114,8 +114,8 @@ printf("%s\n", __FUNCTION__);
 	FP_MakeVia(132,65, 2,1, 7, 14, 1);
 
 //	extern void FP_MakeRectangleX(int yCenter, int zCenter, int yLen, int zLen, int xStart, int xLen, char matIndex);
-	FP_MakeRectangleX(50,35, 30,10, 15, 60, 3);
-//	FP_MakeRectangleY(50,30, 30,10, 7, 24, 4);
+//	FP_MakeRectangleX(20,30, 10,8, 35, 60, 3);
+	FP_MakeRectangleY(50,30, 10,8, 7, 4, 4);
 //	FP_MakeRectangleZ(50,10, 10,30, 7, 24, 2);
 	FD_Testbed(flatSpace, MX, MY, MZ);
 printf("reading back\n");
