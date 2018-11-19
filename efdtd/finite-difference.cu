@@ -807,7 +807,8 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 	int retval = 0;
 	char* d_src;
 	int numBytes = xDim * yDim * sizeof(char);
-
+	if(zStart>simSpace.size.z)
+		return(-1);
 	// move src into GPU space
         retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
 	retval += checkCuda( cudaMemcpy( d_src, src, numBytes, cudaMemcpyHostToDevice), __LINE__);
@@ -824,6 +825,8 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
         dim3 numBlocks(1,1);
 //printf("dim %d, %d\n", blockSize.x, blockSize.y);
 //printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
+	if(zStart+zLen> simSpace.size.z) 
+		zLen = simSpace.size.z-zStart;
 
 	// insert into materials matrrix using maskVal = 0
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
@@ -872,6 +875,8 @@ extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, 
 	int retval = 0;
 	char* d_src;
 	int numBytes = xDim * zDim * sizeof(char);
+	if(yStart>simSpace.size.y)
+		return(-1);
 
 	// move src into GPU space
         retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
@@ -889,6 +894,8 @@ extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, 
         dim3 numBlocks(1,1);
 //printf("dim %d, %d\n", blockSize.x, blockSize.y);
 //printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
+	if(yStart+yLen> simSpace.size.y) 
+		yLen = simSpace.size.y-yStart;
 
 	// insert into materials matrrix using maskVal = 0
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
@@ -937,6 +944,8 @@ extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, 
 	int retval = 0;
 	char* d_src;
 	int numBytes = yDim * zDim * sizeof(char);
+	if(xStart>simSpace.size.x)
+		return(-1);
 
 	// move src into GPU space
         retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
@@ -954,7 +963,8 @@ extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, 
         dim3 numBlocks(1,1);
 //printf("dim %d, %d\n", blockSize.x, blockSize.y);
 //printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
-
+	if(xStart+xLen> simSpace.size.x) 
+		xLen = simSpace.size.x-xStart;
 	// insert into materials matrrix using maskVal = 0
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
