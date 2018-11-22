@@ -8,5 +8,6 @@ extern void FP_MakeDrill(int xCenter, int yCenter, int outerRadius, int innerRad
 extern void FP_MakeRectangleX(int yCenter, int zCenter, int yLen, int zLen, int xStart, int xLen, char matIndex);
 extern void FP_MakeRectangleY(int xCenter, int zCenter, int xLen, int zLen, int yStart, int yLen, char matIndex);
 extern void FP_MakeRectangleZ(int xCenter, int yCenter, int xLen, int yLen, int zStart, int zLen, char matIndex);
+extern int FP_ProcessDrillNodeSet(xmlNodeSetPtr xnsPtr, int z1, int z2, int plateThickness);
 
 #endif
