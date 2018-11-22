@@ -227,7 +227,7 @@ processingFault:
 	return(retval);
 }
 
-extern void FP_MakeVia(int xCenter, int yCenter, int outerRadius, int innerRadius, int zStart, int zLen, char matIndex)
+extern void FP_MakeDrill(int xCenter, int yCenter, int outerRadius, int innerRadius, int zStart, int zLen, char matIndex)
 {
 	int rowSize = outerRadius*2+1;
 	int colSize = rowSize;	// circles are round, but ExtrudeZ doesn't care
@@ -332,5 +332,92 @@ extern void FP_MakeRectangleZ(int xCenter, int yCenter, int xLen, int yLen, int 
 //	int xDim, int yDim, int xCenter, int yCenter, int zStart, int zEnd
 	SimulationSpace_ExtrudeZ(pTemplate, rowSize, colSize, xCenter, yCenter, zStart, zLen );
 	free(pTemplate);	
+}
+
+
+int FP_ProcessDrillNodeSet(xmlNodeSetPtr xnsPtr, int z1, int z2, int plateThickness)
+{
+	int i;
+	int isPlated = 1;
+	if( (xnsPtr == NULL) || (z1==z2))
+	{
+		fprintf(stderr, "%s General Input fault\n", __FUNCTION__);
+		return(-1);
+	}
+
+	for(i = 0; i<xnsPtr->nodeNr; i++)
+	{
+		//              char xpathString[0x400];
+		xmlNodePtr currDrill = xnsPtr->nodeTab[i];
+		if(currDrill == NULL)
+		{
+			return(-2);
+		}
+/*
+<drill id="D0">
+<dia_inches>0.012</dia_inches>
+<radius>6</radius>
+<pos type="plated">662,148</pos>
+</drill>
+*/		        											// get the drill name
+		xmlChar* drillRadius = XPU_LookupFromNode(currDrill, "./radius/text()");
+		fprintf(stdout, "%s:%d radius:<%s>  \n", __FUNCTION__, i, drillRadius);
+		int radius = strtol((char*)drillRadius,NULL,10);
+
+		xmlNodeSetPtr xnsPos = XPU_GetNodeSetFromNode(currDrill, "./pos");
+		if(xnsPos == NULL)
+		{
+			fprintf(stdout, "%s: NULL pos set\n", __FUNCTION__);
+			return(-3);
+		}
+		 
+		int j;
+		for(j=0;j<xnsPos->nodeNr;j++)
+		{
+			xmlNodePtr currPos = xnsPos->nodeTab[j];
+			if(currPos == NULL)
+			{
+				return(-2);
+			}
+			xmlChar* xpos = XPU_LookupFromNode(currPos, "./text()");
+//			fprintf(stdout, "%s ",(char*)xpos);
+			xmlChar* xtype = XPU_LookupFromNode(currPos, "@type");
+//			fprintf(stdout, "%s \n",(char*)xtype);
+
+			char* cval = strtok((char*)xpos, ",");
+			int xp = strtol((char*)cval,NULL,10);
+			cval = strtok(NULL, ",");
+			int yp = strtol((char*)cval,NULL,10);
+			
+			if(strstr((char*)xtype,"unplated")!=NULL)
+			{
+				isPlated = 0;
+			}
+			else if(strstr((char*)xtype,"plated")!=NULL)
+			{
+				isPlated = 1;
+			}
+			
+			fprintf(stdout,"%s x:%d, y:%d, z1:%d, z2:%d, r:%d, t:%d, %s\n", __FUNCTION__, xp,yp,z1,z2,radius,plateThickness, (char*)xtype);
+			
+			if(isPlated == 1)
+			{ // a plated hole consists of two cylinders, one  copper the other is air
+					// 7 the geometery type (cyl)
+					//      x1 y1 z1 x2 y2 z2 rad 
+//				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, COPPER_CYL_INFO);
+//				if((radius-plateThickness) > 0)
+//					fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, AIR_CYL_INFO);
+				FP_MakeDrill(xp, yp, radius, radius-plateThickness, z1, z2-z1, 2);
+			}
+			else
+			{ // an unplaed hole consists of a cylinder of air
+//				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, AIR_CYL_INFO);
+				FP_MakeDrill(xp, yp, radius, radius, z1, z2-z1, 3);
+			}
+			
+			        			
+		}
+	}
+	return(0);
 }
 
