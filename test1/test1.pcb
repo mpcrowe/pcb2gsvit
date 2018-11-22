@@ -1,11 +1,11 @@
-# release: pcb 20140316
+# release: pcb v4.1.0-g608f78fc
 
 # To read pcb files, the pcb version (or the git source date) must be >= the file version
 FileVersion[20091103]
 
 PCB["GCDC1331" 22.0000mm 12.0000mm]
 
-Grid[3937.003937 0.0000 0.0000 0]
+Grid[5.00mil 0.0000 0.0000 0]
 PolyArea[200000000.000000]
 Thermal[0.500000]
 DRC[7.00mil 10.00mil 6.00mil 10.00mil 12.00mil 7.00mil]
@@ -793,9 +793,11 @@ Symbol['~' 12.00mil]
 	SymbolLine[15.00mil 35.00mil 20.00mil 35.00mil 8.00mil]
 	SymbolLine[20.00mil 35.00mil 25.00mil 30.00mil 8.00mil]
 )
-Attribute("PCB::grid::unit" "mm")
-Attribute("PCB::grid::size" "39.37mil")
+Attribute("PCB::grid::unit" "mil")
+Attribute("PCB::grid::size" "5.00mil")
 Via[16.8280mm 323.78mil 26.00mil 16.00mil 0.0000 12.00mil "" "thermal(5X)"]
+Via[18.0000mm 275.59mil 60.00mil 20.00mil 0.0000 35.00mil "" "thermal(5X)"]
+Via[90.00mil 210.00mil 26.00mil 16.00mil 0.0000 12.00mil "" "thermal(5X)"]
 
 Element["" "test_point_smt_50" "START" "unknown" 4.3820mm 213.78mil -50.00mil 30.00mil 0 100 ""]
 (
@@ -813,7 +815,7 @@ Element["" "0603__ROHM" "R1" "10k" 16.8280mm 243.78mil -40.00mil -110.00mil 0 10
 	ElementLine [-25.71mil 61.15mil 25.71mil 61.15mil 10.00mil]
 
 	)
-Layer(1 "top")
+Layer(1 "top" "copper")
 (
 	Line[4.3820mm 213.78mil 176.97mil 5.3170mm 25.00mil 20.00mil "clearline"]
 	Line[176.97mil 5.3170mm 16.8280mm 5.3170mm 25.00mil 20.00mil "clearline"]
@@ -821,16 +823,18 @@ Layer(1 "top")
 	Line[39.37mil 11.0000mm 21.0000mm 11.0000mm 7.00mil 16.00mil "clearline"]
 	Line[21.0000mm 11.0000mm 21.0000mm 39.37mil 7.00mil 16.00mil "clearline"]
 	Line[21.0000mm 39.37mil 39.37mil 39.37mil 7.00mil 16.00mil "clearline"]
+	Line[16.8280mm 278.23mil 706.02mil 278.23mil 25.00mil 20.00mil "clearline"]
+	Line[706.02mil 278.23mil 18.0000mm 275.59mil 25.00mil 20.00mil "clearline"]
 	Text[71.0503mm 19.9148mm 0 102 "Top" "clearline"]
 )
-Layer(2 "Power_top")
+Layer(2 "Power_top" "copper")
 (
 )
-Layer(3 "Gnd_top")
+Layer(3 "Gnd_top" "copper")
 (
 	Line[16.8280mm 323.78mil 16.8280mm 278.23mil 25.00mil 20.00mil "clearline"]
 )
-Layer(4 "bottom")
+Layer(4 "bottom" "copper")
 (
 	Line[39.37mil 39.37mil 39.37mil 11.0000mm 7.00mil 16.00mil "clearline"]
 	Line[39.37mil 11.0000mm 21.0000mm 11.0000mm 7.00mil 16.00mil "clearline"]
@@ -838,27 +842,27 @@ Layer(4 "bottom")
 	Line[21.0000mm 39.37mil 39.37mil 39.37mil 7.00mil 16.00mil "clearline"]
 	Text[70.6190mm 19.0480mm 0 102 "Bottom" "clearline,onsolder"]
 )
-Layer(5 "Pwr_bottom")
+Layer(5 "Pwr_bottom" "copper")
 (
 )
-Layer(6 "Gnd_bottom")
+Layer(6 "Gnd_bottom" "copper")
 (
 	Polygon("clearpoly")
 	(
 		[39.37mil 39.37mil] [21.0000mm 39.37mil] [21.0000mm 11.0000mm] [39.37mil 11.0000mm] 
 	)
 )
-Layer(7 "outline")
+Layer(7 "outline" "outline")
 (
 	Line[39.37mil 39.37mil 39.37mil 11.0000mm 7.00mil 16.00mil "clearline"]
 	Line[39.37mil 11.0000mm 21.0000mm 11.0000mm 7.00mil 16.00mil "clearline"]
 	Line[21.0000mm 11.0000mm 21.0000mm 39.37mil 7.00mil 16.00mil "clearline"]
 	Line[21.0000mm 39.37mil 39.37mil 39.37mil 7.00mil 16.00mil "clearline"]
 )
-Layer(8 "unused")
+Layer(8 "bottom silk" "silk")
 (
 )
-Layer(9 "unused")
+Layer(9 "top silk" "silk")
 (
 )
 NetList()

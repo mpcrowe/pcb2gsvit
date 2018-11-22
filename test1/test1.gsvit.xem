@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gsvit>
 	<comment>Made with PCB gsvit export HID</comment>
-	<genTime>Mon Apr  2 21:38:52 2018</genTime>
+	<genTime>Tue Nov 20 19:22:41 2018</genTime>
 	<space>
 		<comment>***** Space *****</comment>
 		<resolution units="mm">0.127000</resolution>
@@ -41,6 +41,12 @@
 			<dia_inches>0.012</dia_inches>
 			<radius>1</radius>
 			<pos type="plated">132,64</pos>
+			<pos type="plated">18,42</pos>
+		</drill>
+		<drill id="D1">
+			<dia_inches>0.035</dia_inches>
+			<radius>3</radius>
+			<pos type="plated">141,55</pos>
 		</drill>
 	</drills>
 </gsvit>
