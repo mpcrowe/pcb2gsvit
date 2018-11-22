@@ -92,7 +92,6 @@ static struct argp argp = { options, parse_opt, args_doc, doc };
 
 int main(int argc, char* argv[])
 {
-	struct cudaDeviceProp prop;
 	int i;
 	int retval = 0;
 	struct arguments arguments;
@@ -103,28 +102,26 @@ int main(int argc, char* argv[])
 	arguments.output_file = "-";
 	for(i=0;i<MAX_ARGS;i++)
 		arguments.args[i] = NULL;
-
 	// Parse our arguments; every option seen by parse_opt will be reflected in arguments.
 	argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
 
 	// get and display GPU device information
-	cudaGetDeviceProperties(&prop, 0);
-	printf("\nDevice Name: %s\n", prop.name);
-	printf("Compute Capability: %d.%d\n", prop.major, prop.minor);
 	if( arguments.verbose > 0)
 	{
-		printf("Warp size: %d Threads per block: %d\n", prop.warpSize, prop.maxThreadsPerBlock);
-		printf("Cpu count: %d Max kernels: %d\n", prop.multiProcessorCount, prop.concurrentKernels);
-		printf("Const Mem: %ld(Bytes) Global Mem: %ld(MB)  Shared Mem Per CPU: %ld(Bytes) \n", prop.totalConstMem, prop.totalGlobalMem/1000000, prop.sharedMemPerMultiprocessor);
-		printf("Clock Rate: %d(MHz)  Memory Clock rate: %d(MHz)\n\n", prop.clockRate/1000, prop.memoryClockRate/1000);
+		struct cudaDeviceProp prop;
+		cudaGetDeviceProperties(&prop, 0);
+		printf("\nDevice Name: %s\n", prop.name);
+		printf("\tCompute Capability: %d.%d\n", prop.major, prop.minor);
+		printf("\tWarp size: %d Threads per block: %d\n", prop.warpSize, prop.maxThreadsPerBlock);
+		printf("\tCpu count: %d Max kernels: %d\n", prop.multiProcessorCount, prop.concurrentKernels);
+		printf("\tConst Mem: %ld(Bytes) Global Mem: %ld(MB)  Shared Mem Per CPU: %ld(Bytes) \n", prop.totalConstMem, prop.totalGlobalMem/1000000, prop.sharedMemPerMultiprocessor);
+		printf("\tClock Rate: %d(MHz)  Memory Clock rate: %d(MHz)\n\n", prop.clockRate/1000, prop.memoryClockRate/1000);
 	}
 
-	/*
-	* this initialize the library and check potential ABI mismatches
-	* between the version it was compiled for and the actual shared
-	* library used.
-	*/
+	// this initialize the library and check potential ABI mismatches
+	// between the version it was compiled for and the actual shared
+	// library used.
 	LIBXML_TEST_VERSION
 	// Init libxml
 	xmlInitParser();
@@ -140,27 +137,9 @@ int main(int argc, char* argv[])
 			break;
 	}
 
-
 	// shutdown tasks here
-
 	xmlCleanupParser();
 	// this is to debug memory for regression tests
 	//      xmlMemoryDump();
-	if(retval != 0)
-	{
-		return(retval);
-	}
-/*	setDerivativeParameters(); // initialize
-	dim3 size = {100,100,100};
-	SimulationSpace_Create(&size);
-	SimulationSpace_Timestep();
-
-	SimulationSpace_Destroy();
-	setDerivativeParameters(); // initialize
-
-	runTest(0); // x derivative
-	runTest(1); // y derivative
-	runTest(2); // z derivative
-*/
-	return(0);
+	return(retval);
 }
