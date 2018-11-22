@@ -27,6 +27,7 @@ GEDA_SHARED_PATH=/opt/geda_shared
 SCRIPT_PATH = $(GEDA_SHARED_PATH)/bin
 PCB_FOOTPRINT_PATH = $(GEDA_SHARED_PATH)
 PARAVIEW = ../../paraview/ParaView-5.5.0-Qt5-MPI-Linux-64bit/bin/paraview
+GSVIT = ../../gsvit/src3d/gsvit
 
 TEMP_PATH=/tmp
 
@@ -42,35 +43,41 @@ clean:
 pcb:
 	$(PCB) $(PROJECT).pcb
 
-centroid: $(PROJECT).xy
-	
-gsvit: $(PROJECT).gsvit.em $(PROJECT).xy
-
-%.xy: %.pcb
-	$(PCB)  -x bom --bomfile /dev/null --xyfile $@ $<
-	
-
-%.gsvit.em: $(PROJECT).pcb
-	$(PCB) -x gsvit --dpi 200 $(PROJECT).pcb
-	rm *.save
-
 workTemp:
 	mkdir workTemp
 	
 sch:
 	$(GSCHEM) $(PROJECT).sch
 	
+medLin.riff:
+	../src/pcb2svit boardInfo.xml
+
+centroid: $(PROJECT).xy
+	
+gsvit: $(PROJECT).gsvit.em $(PROJECT).xy
+
+%.xy: %.pcb
+	$(PCB)  -x bom --bomfile /dev/null --xyfile $@ $<
+
+%.gsvit.em: $(PROJECT).pcb
+	$(PCB) -x gsvit --dpi 200 $(PROJECT).pcb
+	rm *.save
+
 test: gsvit
 	../src/pcb2gsvit boardInfo.xml
 	
 gsvit_test: test
+	@echo "Starting gsvit\n\n"
 	mkdir -p vout
-	gsvit first.par
+	$(GSVIT) first.par
 
 test_display:
 	$(PARAVIEW) temp.xdmf
 
-display: medLin.bin
+medLin.raw: medLin.bin
+	ln -sf medLin.bin medLin.raw
+
+display: medLin.raw
 
 	$(PARAVIEW) test1.xdmf
 

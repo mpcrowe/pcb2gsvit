@@ -2,7 +2,7 @@ POOL
 173 94 44 1e-06 1e-06 1e-06
 
 COMP
-100
+400
 
 VERBOSE
 1
@@ -16,8 +16,9 @@ GPU
 UGPU
 0
 
+#x y  z sin lamda amp yaw pitch(rad)
 SOURCE_POINT
-34 43 19 1 4e-05 10 0 1.5708
+34 43 20 1 4e-05 10 0 1.5708
 
 BOUNDARY_ALL
 liao
@@ -43,6 +44,7 @@ Ez 1 132 -1 -1 ez_at_via
 OUT_IMAGE
 Ez 1 -1 -1 19 top
 
+#"Ex", "Ey", "Ez", "Hx", "Hy", "Hz", "All", "Cur", "Epsilon", "Sigma", "Mu", "Sigast", "Material"
 OUT_VOLUME
 All 10 80 380 0 vout/voutput1
 
