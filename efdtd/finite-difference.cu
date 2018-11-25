@@ -817,8 +817,8 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 	// compute offset from dim and center
 	//compute number of blocks and threads to cover space
 	dim3 offset;
-	offset.x = xCenter+xDim/2;
-	offset.y = yCenter+yDim/2;
+	offset.x = xCenter-xDim/2;
+	offset.y = yCenter-yDim/2;
 	offset.z = zStart;
 
 	dim3 blockSize(xDim, yDim);
@@ -886,8 +886,8 @@ extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, 
 	// compute offset from dim and center
 	//compute number of blocks and threads to cover space
 	dim3 offset;
-	offset.x = xCenter+xDim/2;
-	offset.z = zCenter+zDim/2;
+	offset.x = xCenter-xDim/2;
+	offset.z = zCenter-zDim/2;
 	offset.y = yStart;
 
 	dim3 blockSize(xDim, zDim);
@@ -955,8 +955,8 @@ extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, 
 	// compute offset from dim and center
 	//compute number of blocks and threads to cover space
 	dim3 offset;
-	offset.y = yCenter+yDim/2;
-	offset.z = zCenter+zDim/2;
+	offset.y = yCenter-yDim/2;
+	offset.z = zCenter-zDim/2;
 	offset.x = xStart;
 
 	dim3 blockSize(yDim, zDim);
