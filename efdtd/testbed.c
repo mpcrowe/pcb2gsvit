@@ -107,15 +107,16 @@ void makeVolume(GLuint edge)
 {
 	int i,  j, k;
 //	FD_Init3dSpaceCos(flatSpace, 2, MX, MY, MZ, 5.0f, 1.2f );
-	FP_ReadRiff("../test1/medLin.riff");
+	FP_ProcessFile("../test1/boardInfo.xml",1, 0);
+//	FP_ReadRiff("../test1/medLin.riff");
 printf("%s\n", __FUNCTION__);
 //extern void FP_MakeDrill(int xCenter, int yCenter, int outerRadius, int innerRadius, int start, int end, char matIndex)
 // 132 65 7 132 65 21
-	FP_MakeDrill(132,65, 2,1, 7, 14, 1);
+//	FP_MakeDrill(132,65, 2,1, 7, 14, 1);
 
 //	extern void FP_MakeRectangleX(int yCenter, int zCenter, int yLen, int zLen, int xStart, int xLen, char matIndex);
 //	FP_MakeRectangleX(20,30, 10,8, 35, 60, 3);
-	FP_MakeRectangleY(50,30, 10,8, 7, 4, 4);
+//	FP_MakeRectangleY(50,30, 10,8, 7, 4, 4);
 //	FP_MakeRectangleZ(50,10, 10,30, 7, 24, 2);
 	FD_Testbed(flatSpace, MX, MY, MZ);
 printf("reading back\n");

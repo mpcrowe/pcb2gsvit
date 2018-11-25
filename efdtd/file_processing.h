@@ -2,6 +2,8 @@
 #define _FILE_PROCESSING 1
 
 #include <errno.h>
+#include <libxml/xpath.h>
+
 extern  int FP_ReadRiff(char* riffFname);
 extern int FP_ProcessFile(char* fname, int verbose, int silent);
 extern void FP_MakeDrill(int xCenter, int yCenter, int outerRadius, int innerRadius, int zStart, int zLen, char matIndex);

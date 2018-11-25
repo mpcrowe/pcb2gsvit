@@ -28,6 +28,7 @@
 // This the main host code for the finite difference
 // example.  The kernels are contained in the derivative_m module
 #include "finite-difference.h"
+#include "file_processing.h"
 /*----------------------------------------------------------------------------
 *        Internal definitions
 *----------------------------------------------------------------------------*/
@@ -162,6 +163,80 @@ processingFault:
 	return(0);
 } // end ReadRiff
 
+static int FP_ProcessLayers(xmlNodeSetPtr xnsPtr)
+{
+	int retval = 0;
+//		GList* gLayers = NULL;
+	int zVoxelTotal = 0;
+	int zVoxelBottom  = 0;
+	int zVoxelTop = 0;
+	int i;
+	fprintf(stdout, "%s \n", __FUNCTION__);
+	for(i = 0; i<xnsPtr->nodeNr; i++)
+	{
+//		fRect* fRectCurrent;
+//              char xpathString[0x400];
+		xmlNodePtr currLayer = xnsPtr->nodeTab[i];
+		if(currLayer == NULL)
+		{
+			return(-1);
+		}
+
+		// get the layer name
+		xmlChar* layerName = XPU_LookupFromNode(currLayer, "./name/text()");
+		fprintf(stdout, "\t%d name:<%s>  \t", i, layerName);
+
+		// get the base type fill or outline or null
+		xmlChar* baseType = XPU_LookupFromNode(currLayer, "./baseType/text()");
+		fprintf(stdout, "\t%d name:<%s> basetype<%s> \t", i, layerName, baseType);
+
+		// get the material name and material index (from the name)
+		xmlChar* materialName = XPU_LookupFromNode(currLayer, "./material/text()");
+		if(materialName == NULL)
+		{
+			fprintf(stderr, "\nError, no material name specified\n");
+			retval=-2;
+			goto processingFault;
+		}
+		fprintf(stdout, "\tmaterial:<%s> \t",  materialName);
+		// get the thickness of the layer
+		xmlChar* cThickness = XPU_LookupFromNode(currLayer, "./thickness/text()");
+		if(cThickness == NULL)
+		{
+//			cThickness = MATRL_DefaultThickness(mIndex);
+			fprintf(stdout, "WARN, using default thickness %s\n",cThickness);
+		}
+		if(cThickness == NULL)
+		{
+			fprintf(stderr, "ERROR, no thickness or default thickness defined\n");
+			retval = -3;
+			goto processingFault;
+		}
+		int zVoxelCount = MATRL_StringToCounts((char*)cThickness, fp_resolution);
+		if(zVoxelCount <=0)
+		{
+			return(-2);
+			goto processingFault;
+		}
+		fprintf(stdout, "voxel count, z-axis: %d\n", zVoxelCount);
+
+		if(strstr("bottom",  (char*)layerName) != NULL)
+		{
+			zVoxelBottom = zVoxelTotal;
+		}
+		zVoxelTotal += zVoxelCount;
+		if(strstr("top",  (char*)layerName) != NULL)
+		{
+			zVoxelTop = zVoxelTotal;
+		}
+	}
+	fprintf(stdout, "\tz-axis botom %d top: %d\n", zVoxelBottom, zVoxelTop);
+	
+processingFault:
+	fprintf(stdout, "%s end %d \n", __FUNCTION__, retval);
+
+	return(retval);
+}
 
 // main processing of xml files here
 extern int FP_ProcessFile(char* fname, int verbose, int silent)
@@ -239,10 +314,11 @@ extern int FP_ProcessFile(char* fname, int verbose, int silent)
 	}
 
 	// get the layers from the board document
-	xmlNodeSetPtr xnsLayers  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
-	if(xnsLayers == NULL)
+	xmlNodeSetPtr xnsPtr  = XPU_GetNodeSet(boardDoc, XPATH_XEM_LAYERS);
+	if(xnsPtr == NULL)
 		goto processingFault;
 
+	FP_ProcessLayers(xnsPtr);
 
 	char* riffFilename = getRiffFilename(boardDoc, fname);
 	if(riffFilename != NULL)
@@ -371,6 +447,7 @@ extern void FP_MakeRectangleZ(int xCenter, int yCenter, int xLen, int yLen, int 
 }
 
 
+
 extern int FP_ProcessDrillNodeSet(xmlNodeSetPtr xnsPtr, int z1, int z2, int plateThickness)
 {
 	int i;
@@ -397,7 +474,7 @@ extern int FP_ProcessDrillNodeSet(xmlNodeSetPtr xnsPtr, int z1, int z2, int plat
 </drill>
 */		        											// get the drill name
 		xmlChar* drillRadius = XPU_LookupFromNode(currDrill, "./radius/text()");
-		fprintf(stdout, "%s:%d radius:<%s>  \n", __FUNCTION__, i, drillRadius);
+		fprintf(stdout, "%s:%d radius:<%s>\n", __FUNCTION__, i, drillRadius);
 		int radius = strtol((char*)drillRadius,NULL,10);
 
 		xmlNodeSetPtr xnsPos = XPU_GetNodeSetFromNode(currDrill, "./pos");
@@ -442,12 +519,12 @@ extern int FP_ProcessDrillNodeSet(xmlNodeSetPtr xnsPtr, int z1, int z2, int plat
 					//      x1 y1 z1 x2 y2 z2 rad
 //				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, COPPER_CYL_INFO);
 //				if((radius-plateThickness) > 0)
-//					fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, AIR_CYL_INFO);
-				FP_MakeDrill(xp, yp, radius, radius-plateThickness, z1, z2-z1, 2);
+					fprintf(stdout, "7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius-plateThickness, "Air 3");
+				FP_MakeDrill(xp, yp, radius, radius-plateThickness, z1, z2-z1, 3);
 			}
 			else
 			{ // an unplaed hole consists of a cylinder of air
-//				fprintf(mvfd,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, AIR_CYL_INFO);
+				fprintf(stdout,"7 %d %d %d %d %d %d %d %s\n", xp,yp,z1,xp,yp,z2,radius, "Air 3");
 				FP_MakeDrill(xp, yp, radius, radius, z1, z2-z1, 3);
 			}
 
