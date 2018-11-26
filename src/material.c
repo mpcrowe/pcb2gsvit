@@ -19,6 +19,7 @@
 
 #include "material.h"
 #include "xpu.h"
+#include "xpathConsts.h"
 
 material_t* materialTable = NULL;
 indexSize_t materialTableSize = 0;
@@ -52,6 +53,7 @@ void MATRL_DumpAll(void)
 	fprintf(stdout, "\n");
 }
 
+
 int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 {
 	indexSize_t i;
@@ -65,7 +67,7 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 	materialTable[0].ur = 1.0;
 	materialTable[0].sus = 0.0;
 	materialTable[0].conductivity = 8.0e-15; // mho/m
-	
+
 	for(i=1; i<xnsMaterials->nodeNr +1; i++)
 	{
 		materialTable[i].name = (xmlChar*)"unused";
@@ -85,7 +87,7 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 		}
 
 		matCur.name = XPU_LookupFromNode(currMaterial, "./@id");
-		
+
 		xmlChar* matEr = XPU_LookupFromNode(currMaterial, "./relativePermittivity/text()");
 		if(matEr == NULL)
 		{
@@ -105,14 +107,14 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 		double cond = strtod((char*)matCond, NULL);
 		xmlFree(matCond);
 		matCur.conductivity = cond;
-		  			
+
 		xmlChar* cThickness = XPU_LookupFromNode(currMaterial, "./thickness/text()");
 		if(cThickness == NULL)
 		{
 			cThickness = (xmlChar*)"0.001";
 		}
 		matCur.defaultThickness = cThickness;
-		
+
 		if(strcmp((char*)(matCur.name), "air") == 0)
 		{ // special case, air replaces the default fill material (vacuum)
 			materialTable[0].name = matCur.name;
@@ -136,7 +138,23 @@ int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials)
 	return(0);
 }
 
-int MATRL_GetIndex(char* name)
+
+extern int MATRL_CreateTable( xmlDocPtr boardDoc, int verbose)
+{
+	// create the materials table
+	xmlNodeSetPtr xnsMaterials  = XPU_GetNodeSet(boardDoc, XPATH_XEM_MATERIALS);
+	if(xnsMaterials == NULL)
+		return(-1);
+
+	if(MATRL_CreateTableFromNodeSet(xnsMaterials) !=0)
+		return(-2);
+	if(verbose)
+		MATRL_DumpAll();
+	return(0);
+}
+
+
+extern int MATRL_GetIndex(char* name)
 {
 	indexSize_t retval = 0;
 	for(retval = 0; retval<materialTableSize; retval++)
@@ -149,8 +167,9 @@ int MATRL_GetIndex(char* name)
 	return((indexSize_t)(-1));
 }
 
+
 // returns the value converted to meters
-double MATRL_ScaleToMeters(double val, char* units) 
+double MATRL_ScaleToMeters(double val, char* units)
 {
 	if(units == NULL)
 		return(val);
@@ -189,10 +208,11 @@ int MATRL_StringToCounts(char* pString, double metersPerPixel)
 	int retval = (int)(retvalf/metersPerPixel);
 	if(retval == 0) retval = 1;
 //	fprintf(stdout, "%f, %f %d, <%s>\n", tempf, retvalf, retval, pend);
-	return(retval);	
-	
+	return(retval);
+
 //	return(-1);
 }
+
 
 extern float MATRL_Er(int index)
 {
@@ -200,6 +220,7 @@ extern float MATRL_Er(int index)
 		return(-1.0f);
 	return( materialTable[index].er);
 }
+
 
 extern float MATRL_Cond(int index)
 {
@@ -217,6 +238,7 @@ extern float MATRL_Chi(int index)
 	return( 0.0f);
 }
 
+
 // part of Debye formulation of a frequency dependant lossy media
 // return 1 until we know how to compute this time constant, but is the -3dB point of the
 // media we are characterizing
@@ -227,12 +249,14 @@ extern float MATRL_T0(int index)
 	return( 1.0f);
 }
 
+
 extern float MATRL_Ur(int index)
 {
 	if(index >= materialTableSize)
 		return(-1.0f);
 	return( materialTable[index].ur);
 }
+
 
 extern float MATRL_Sus(int index)
 {

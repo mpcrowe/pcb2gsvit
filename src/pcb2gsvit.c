@@ -41,7 +41,7 @@
 char* getXemFilename(xmlDocPtr doc, const char* parentDocName);
 char* getMediumLinearOutputFilename(xmlDocPtr doc, const char* parentDocName);
  	 	   	 	  
-int execute_conversion(const char* filename);
+int execute_conversion(const char* filename, int verbose);
 static void usage(const char *name);
 
 
@@ -88,7 +88,7 @@ char* getRiffOutputFilename(xmlDocPtr doc, const char* parentDocName)
 }
 
 
-int execute_conversion(const char* filename)
+int execute_conversion(const char* filename, int verbose)
 {
 	xmlDocPtr boardDoc;
 	xmlDocPtr xemDoc;
@@ -111,7 +111,8 @@ int execute_conversion(const char* filename)
 	{
 		goto processingFault;
 	}
-	fprintf(stdout, "%s\n",xemFilename);
+	if(verbose)
+		fprintf(stdout, "%s\n",xemFilename);
 
 	// parse xem file
 	xemDoc = xmlParseFile(xemFilename);
@@ -135,7 +136,8 @@ int execute_conversion(const char* filename)
 	int32_t height = strtol((char*)cHeight,NULL,10);
 	xmlFree(cHeight);
 
-	fprintf(stdout,"w:%d: h:%d:\n",width, height);
+	if(verbose)
+		fprintf(stdout,"w:%d: h:%d:\n",width, height);
 
 	// get the pixel resolution, in meters per pixel
 	double res = XPU_GetDouble(xemDoc, XPATH_NELMA_RES);
@@ -143,17 +145,14 @@ int execute_conversion(const char* filename)
 		goto processingFault;
 	xmlChar* units = XPU_SimpleLookup(xemDoc, XPATH_NELMA_RES_UNITS);
 	res = MATRL_ScaleToMeters(res, (char*)units);
-	fprintf(stdout, "adjusted res: %g\n", res);
+	if(verbose)
+		fprintf(stdout, "adjusted res: %g\n", res);
 
 	// create the materials table
-	xmlNodeSetPtr xnsMaterials  = XPU_GetNodeSet(boardDoc, XPATH_XEM_MATERIALS);
-	if(xnsMaterials == NULL)
+	retval = MATRL_CreateTable( boardDoc, verbose);
+	if(retval)
 		goto processingFault;
 
-	if(MATRL_CreateTableFromNodeSet(xnsMaterials) !=0)
-		goto processingFault;
-	
-	MATRL_DumpAll();
 	
 	xmlChar* outlineMaterial = XPU_SimpleLookup(boardDoc, XPATH_XEM_OUTLINE);
 	if(outlineMaterial == NULL)
@@ -515,6 +514,7 @@ static void usage(const char *name)
 // all the work is done in a another function
 int main(int argc, char **argv)
 {
+	int verbose = 1;
 	// Parse command line and process file
 	if((argc < 1) || (argc > 2))
 	{
@@ -528,7 +528,7 @@ int main(int argc, char **argv)
 	LIBXML_TEST_VERSION
 
 	// Do the main job
-	if(execute_conversion(argv[1] ) < 0)
+	if(execute_conversion(argv[1], verbose ) < 0)
 	{
 		usage(argv[0]);
 		return(-1);

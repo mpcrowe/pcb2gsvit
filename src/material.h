@@ -21,9 +21,10 @@ typedef uint16_t indexSize_t;
 
 void MATRL_Init(indexSize_t tableSize);
 int MATRL_CreateTableFromNodeSet(xmlNodeSetPtr xnsMaterials);
+extern int MATRL_CreateTable( xmlDocPtr boardDoc, int verbose);
 void MATRL_Dump(material_t* mat);
 void MATRL_DumpAll(void);
-int MATRL_GetIndex(char* name);
+extern int MATRL_GetIndex(char* name);
 int MATRL_StringToCounts(char* pString, double metersPerPixel);
 double MATRL_ScaleToMeters(double val, char* units);
 
