@@ -4,7 +4,6 @@
 *for details see
 *https://devblogs.nvidia.com/finite-difference-methods-cuda-cc-part-1
 */
-
 #include <stdio.h>
 #include <assert.h>
 extern "C" {
@@ -28,16 +27,11 @@ inline cudaError_t checkCuda(cudaError_t result, int lineNum)
 }
 
 #define SHARED_SIZE 0x4000
-float fx = 6.0f, fy = 1.0f, fz = 1.0f;
-const int mx = 256, my = 256, mz = 256;
-
 // shared memory tiles will be m*-by-*Pencils
 // sPencils is used when each thread calculates the derivative at one point
 const int sPencils = 4;  // small # pencils
 
-dim3 numBlocks[3][2], threadsPerBlock[3][2];
-
-__constant__ int c_mx, c_my, c_mz;
+__constant__ int c_mx, c_my, c_mz;	// size of the simulation space instance in gpu space
 __constant__ int c_numElements;
 __constant__ float c_delExp;  // coeff used in calculating the efield
 __constant__ float* c_ga;
@@ -45,12 +39,49 @@ __constant__ float* c_gb;
 __constant__ float* c_gc;
 __constant__ char* c_mi;
 
-// stencil coefficients
+// stencil coefficients, used in computing the partial derivative
 __constant__ float c_ax, c_bx, c_cx, c_dx;
 __constant__ float c_ay, c_by, c_cy, c_dy;
 __constant__ float c_az, c_bz, c_cz, c_dz;
-
 __constant__ float c_coef_x[9];
+
+
+// this work is based on
+// Dennis M. Sullivan "EM Simulation Using the FDTD Method", 2000 IEEE
+
+// this structure is important because the curl computes the field in all
+// three directions, without a structure to maintain the relationships,
+// the bookeeping becomes complicated
+struct vector_field
+{
+	float* d_x;	// pointer to a "flat" 3-d space located on the GPU, one for each direction
+	float* d_y;
+	float* d_z;
+};
+
+struct simulation_space
+{
+	dim3 size;	// the size of the simulation space
+	struct vector_field dField;	// electric flux density, see Sullivan P.32 chapter 2.1
+	struct vector_field eField;	// the electrical field
+	struct vector_field hField;	// the magnetic field
+	struct vector_field iField;	// a parameter that stores a current (efield* conductivity) like parameter
+	struct vector_field sField;	// ????
+	char* d_mat_index;	//
+	float* d_ga;		// relative permittivity (with some time varying things)
+	float* d_gb;		// the conductivity (some time varient 	stuff)
+	float* d_gc;		// the frequency dependant media value
+	float dx;
+	float dy;
+	float dz;
+};
+
+
+// fixme wrap these things into a structure
+int spaceInitialized = 0;
+struct simulation_space simSpace;	// component fields
+//float* cpuWorkingSpace;		// this is a space the same size as the volume as we work with in the GPU, use it as a temporary work space
+
 
 
 static int updateDerivativeParametersX(int voxels, float scale)
@@ -131,118 +162,6 @@ static int updateDerivativeParametersZ(int voxels, float scale)
 	return (0);
 }
 
-#if 0
-// host routine to set constant data
-extern "C" void updateDerivativeParameters(dim3 size, float dx, float dy, float dz )
-{
-	updateDerivativeParametersX(size.x, dx);
-	updateDerivativeParametersY(size.y, dy);
-	updateDerivativeParametersZ(size.z, dz);
-	checkCuda( cudaMemcpyToSymbol(c_mx, &size.x, sizeof(int)), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_my, &size.y, sizeof(int)), __LINE__  );
-	checkCuda( cudaMemcpyToSymbol(c_mz, &size.z, sizeof(int)), __LINE__  );
-
-	// Execution configurations for small pencil tiles
-
-	// x derivative
-	numBlocks[0][0]  = dim3(size.y / sPencils, size.z, 1);
-	threadsPerBlock[0][0] = dim3(size.x, sPencils, 1);
-	numBlocks[0][1]  = dim3(size.y / sPencils, size.z, 1);
-	threadsPerBlock[0][1] = dim3(size.x, sPencils, 1);
-
-	// y derivative
-	numBlocks[1][0]  = dim3(size.x / sPencils, size.z, 1);
-	threadsPerBlock[1][0] = dim3(sPencils, size.y, 1);
-	numBlocks[1][1]  = dim3(size.x / sPencils, size.z, 1);
-	threadsPerBlock[1][1] = dim3(sPencils, size.y, 1);
-
-	// z derivative
-	numBlocks[2][0]  = dim3(size.x / sPencils, size.y, 1);
-	threadsPerBlock[2][0] = dim3(sPencils, size.z, 1);
-	numBlocks[2][1]  = dim3(size.x / sPencils, size.y, 1);
-	threadsPerBlock[2][1] = dim3(sPencils, size.z, 1);
-}
-#endif
-
-static void FD_Init3dSpaceCos(float* space, int dim, int dim_x, int dim_y, int dim_z, float mag, float freq)
-{
-	const float twopi = 8.f * (float)atan(1.0);
-
-	for (int k = 0; k < dim_z; k++)
-	{
-		for (int j = 0; j < dim_y; j++)
-		{
-			for (int i = 0; i < dim_x; i++)
-			{
-				switch (dim)
-				{
-				case 0:
-					space[k*dim_x*dim_y+j*dim_x+i] = mag * cos(freq*twopi*(i-1.f)/(dim_x-1.f));
-				break;
-				case 1:
-					space[k*dim_x*dim_y+j*dim_x+i] = mag * cos(freq*twopi*(j-1.f)/(dim_y-1.f));
-				break;
-				case 2:
-					space[k*dim_x*dim_y+j*dim_x+i] = mag* cos(freq*twopi*(k-1.f)/(dim_z-1.f));
-				break;
-				}
-			}
-		}
-	}
-}
-
-
-static void initSol(float *sol, int dim)
-{
-	const float twopi = 8.f * (float)atan(1.0);
-
-	for (int k = 0; k < mz; k++)
-	{
-		for (int j = 0; j < my; j++)
-		{
-			for (int i = 0; i < mx; i++)
-			{
-				switch (dim)
-				{
-				case 0:
-					sol[k*mx*my+j*mx+i] = -fx*twopi*sin(fx*twopi*(i-1.f)/(mx-1.f));
-				break;
-				case 1:
-					sol[k*mx*my+j*mx+i] = -fy*twopi*sin(fy*twopi*(j-1.f)/(my-1.f));
-				break;
-				case 2:
-					sol[k*mx*my+j*mx+i] = -fz*twopi*sin(fz*twopi*(k-1.f)/(mz-1.f));
-				break;
-				}
-			}
-		}
-	}
-}
-
-
-static void checkResults(double &error, double &maxError, float *sol, float *df)
-{
-	// error = sqrt(sum((sol-df)**2)/(mx*my*mz))
-	// maxError = maxval(abs(sol-df))
-	maxError = 0;
-	error = 0;
-	for (int k = 0; k < mz; k++)
-	{
-		for (int j = 0; j < my; j++)
-		{
-			for (int i = 0; i < mx; i++)
-			{
-				float s = sol[k*mx*my+j*mx+i];
-				float f = df[k*mx*my+j*mx+i];
-				//printf("%d %d %d: %f %f\n", i, j, k, s, f);
-				error += (s-f)*(s-f);
-				if (fabs(s-f) > maxError) maxError = fabs(s-f);
-			}
-		}
-	}
-	error = sqrt(error / (mx*my*mz));
-}
-
 
 // -------------
 // x derivatives
@@ -318,40 +237,6 @@ __global__ void derivative_x_fir(float *f, float *df)
 	
 }
 
-// -------------
-// y derivatives
-// -------------
-__global__ void derivative_y_fixed(float *f, float *df)
-{
-	__shared__ float s_f[my+8][sPencils];
-
-	int i  = blockIdx.x*blockDim.x + threadIdx.x;
-	int j  = threadIdx.y;
-	int k  = blockIdx.y;
-	int si = threadIdx.x;
-	int sj = j + 4;
-
-	int globalIdx = k * mx * my + j * mx + i;
-
-	s_f[sj][si] = f[globalIdx];
-
-	__syncthreads();
-
-	if (j < 4)
-	{  // this wraps the derivative space into a circle,  probably not what is desired for a real world problem
-		s_f[sj-4][si]  = s_f[sj+my-5][si];
-		s_f[sj+my][si] = s_f[sj+1][si];
-	}
-
-	__syncthreads();
-
-	df[globalIdx] =
-		( c_ay * ( s_f[sj+1][si] - s_f[sj-1][si] )
-		+ c_by * ( s_f[sj+2][si] - s_f[sj-2][si] )
-		+ c_cy * ( s_f[sj+3][si] - s_f[sj-3][si] )
-		+ c_dy * ( s_f[sj+4][si] - s_f[sj-4][si] ) );
-}
-
 
 __global__ void derivativeAccumY(float *f, float *df)
 {
@@ -385,40 +270,6 @@ __global__ void derivativeAccumY(float *f, float *df)
 }
 
 
-// ------------
-// z derivative
-// ------------
-__global__ void derivative_z_fixed(float *f, float *df)
-{
-	__shared__ float s_f[mz+8][sPencils];
-
-	int i  = blockIdx.x*blockDim.x + threadIdx.x;
-	int j  = blockIdx.y;
-	int k  = threadIdx.y;
-	int si = threadIdx.x;
-	int sk = k + 4; // halo offset
-
-	int globalIdx = k * mx * my + j * mx + i;
-
-	s_f[sk][si] = f[globalIdx];
-
-	__syncthreads();
-
-	if (k < 4)
-	{
-		s_f[sk-4][si]  = s_f[sk+mz-5][si];
-		s_f[sk+mz][si] = s_f[sk+1][si];
-	}
-
-	__syncthreads();
-
-	df[globalIdx] =
-		( c_az * ( s_f[sk+1][si] - s_f[sk-1][si] )
-		+ c_bz * ( s_f[sk+2][si] - s_f[sk-2][si] )
-		+ c_cz * ( s_f[sk+3][si] - s_f[sk-3][si] )
-		+ c_dz * ( s_f[sk+4][si] - s_f[sk-4][si] ) );
-}
-
 __global__ void derivativeAccumZ(float *f, float *df)
 {
 //  __shared__ float s_f[mz+8][sPencils];
@@ -451,150 +302,6 @@ __global__ void derivativeAccumZ(float *f, float *df)
 		+ c_dz * ( s_f[(sPencils)*(sk+4)+si] - s_f[(sPencils)*(sk-4)+si] ) );
 }
 
-
-
-
-// Run the kernels for a given dimension. One for sPencils, one for lPencils
-extern "C" void runTest(int dimension)
-{
-	void (*fpDeriv[2])(float*, float*);
-
-	switch(dimension) {
-	case 0:
-		fpDeriv[0] = derivativeAccumX;
-		fpDeriv[1] = derivative_x_fir;
-	break;
-	case 1:
-		fpDeriv[0] = derivativeAccumY;
-		fpDeriv[1] = derivative_y_fixed;
-	break;
-	case 2:
-		fpDeriv[0] = derivativeAccumZ;
-		fpDeriv[1] = derivative_z_fixed;
-	break;
-	}
-
-	int sharedDims[3][2][2] = {
-		mx, sPencils,
-		mx, sPencils,
-
-		sPencils, my,
-		sPencils, my,
-
-		sPencils, mz,
-		sPencils, mz };
-
-	float *f = new float[mx*my*mz];
-	float *df = new float[mx*my*mz];
-	float *sol = new float[mx*my*mz];
-
-//	initInput(f, dimension);
-	float freq = fz;
-	if(dimension ==0)
-		freq = fx;
-	else if(dimension == 1)
-		freq = fy;
-	else
-		freq = fz;
-	FD_Init3dSpaceCos(f, dimension, mx, my, mz, 1.0f, freq);
-
-	initSol(sol, dimension);
-
-	// device arrays
-	int bytes = mx*my*mz * sizeof(float);
-	float *d_f, *d_df;
-
-	checkCuda( cudaMalloc((void**)&d_f, bytes), __LINE__  );
-	checkCuda( cudaMalloc((void**)&d_df, bytes), __LINE__  );
-
-	const int nReps = 20;
-	float milliseconds;
-	cudaEvent_t startEvent, stopEvent;
-
-	checkCuda( cudaEventCreate(&startEvent), __LINE__  );
-	checkCuda( cudaEventCreate(&stopEvent), __LINE__  );
-
-	double error, maxError;
-
-	printf("%c derivatives\n\n", (char)(0x58 + dimension));
-
-	for (int fp = 0; fp < 2; fp++)
-	{
-		checkCuda( cudaMemcpy(d_f, f, bytes, cudaMemcpyHostToDevice), __LINE__  );
-
-		fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],SHARED_SIZE>>>(d_f, d_df); // warm up
-		checkCuda( cudaEventRecord(startEvent, 0), __LINE__  );
-		for (int i = 0; i < nReps; i++)
-		{
-			checkCuda( cudaMemset(d_df, 0, bytes), __LINE__  );
-
-			fpDeriv[fp]<<<numBlocks[dimension][fp],threadsPerBlock[dimension][fp],SHARED_SIZE>>>(d_f, d_df);
-		}
-
-		checkCuda( cudaEventRecord(stopEvent, 0), __LINE__  );
-		checkCuda( cudaEventSynchronize(stopEvent), __LINE__  );
-		checkCuda( cudaEventElapsedTime(&milliseconds, startEvent, stopEvent), __LINE__  );
-
-		checkCuda( cudaMemcpy(df, d_df, bytes, cudaMemcpyDeviceToHost), __LINE__  );
-
-		checkResults(error, maxError, sol, df);
-
-		printf("  Using shared memory tile of %d x %d\n", sharedDims[dimension][fp][0], sharedDims[dimension][fp][1]);
-		printf("   RMS error: %e\n", error);
-		printf("   MAX error: %e\n", maxError);
-		printf("   Average time (ms): %f\n", milliseconds / nReps);
-		printf("   Average Bandwidth (GB/s): %f\n\n",
-		   2.f * 1e-6 * mx * my * mz * nReps * sizeof(float) / milliseconds);
-	}
-
-	checkCuda( cudaEventDestroy(startEvent), __LINE__  );
-	checkCuda( cudaEventDestroy(stopEvent), __LINE__  );
-
-	checkCuda( cudaFree(d_f), __LINE__  );
-	checkCuda( cudaFree(d_df), __LINE__  );
-
-	delete [] f;
-	delete [] df;
-	delete [] sol;
-}
-
-
-
-// this work is based on
-// Dennis M. Sullivan "EM Simulation Using the FDTD Method", 2000 IEEE
-
-// this structure is important because the curl computes the field in all
-// three directions, without a structure to maintain the relationships,
-// the bookeeping becomes complicated
-struct vector_field
-{
-	float* d_x;	// pointer to a "flat" 3-d space located on the GPU, one for each direction
-	float* d_y;
-	float* d_z;
-};
-
-struct simulation_space
-{
-	dim3 size;	// the size of the simulation space
-	struct vector_field dField;	// electric flux density, see Sullivan P.32 chapter 2.1
-	struct vector_field eField;	// the electrical field
-	struct vector_field hField;	// the magnetic field
-	struct vector_field iField;	// a parameter that stores a current (efield* conductivity) like parameter
-	struct vector_field sField;	// ????
-	char* d_mat_index;	//
-	float* d_ga;		// relative permittivity (with some time varying things)
-	float* d_gb;		// the conductivity (some time varient 	stuff)
-	float* d_gc;		// the frequency dependant media value
-	float dx;
-	float dy;
-	float dz;
-};
-
-
-// fixme wrap these things into a structure
-int spaceInitialized = 0;
-struct simulation_space simSpace;	// component fields
-float* cpuWorkingSpace;		// this is a space the same size as the volume as we work with in the GPU, use it as a temporary work space
 
 static void partialX(float* dest, float* src, float scale, dim3 size)
 {
@@ -782,7 +489,7 @@ __global__ void arraySet(int n, T* ptr, T val)
 
 
 template <typename T>
-__global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T maskVal)
+__global__ void extrudeZ(T* dest, dim3 destSize, T* src, dim3 offset, int zLen, T maskVal)
 {
 	int i   = threadIdx.x;
 	int j   = blockIdx.x*blockDim.y + threadIdx.y;
@@ -792,7 +499,7 @@ __global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T
 	if(val !=maskVal)
 	{
 		int count = zLen;
-		int globalIdx = c_my * c_mz * (i+offset.x) + c_mz * (j+offset.y ) + offset.z;
+		int globalIdx = destSize.y * destSize.z * (i+offset.x) + destSize.z * (j+offset.y ) + offset.z;
 		T* ptr = &dest[globalIdx];
 		while(count--)
 		{
@@ -801,14 +508,15 @@ __global__ void extrudeZ(T* dest, T* src, dim3 srcSize, dim3 offset, int zLen, T
 	}
 }
 
-
-extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
+template <typename T>
+static int _ExtrudeZArb(T* dest, dim3 dSize, char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
 {
 	int retval = 0;
 	char* d_src;
 	int numBytes = xDim * yDim * sizeof(char);
-	if(zStart>simSpace.size.z)
+	if(zStart>dSize.z)
 		return(-1);
+
 	// move src into GPU space
         retval += checkCuda( cudaMalloc((void**)&d_src, numBytes), __LINE__  );
 	retval += checkCuda( cudaMemcpy( d_src, src, numBytes, cudaMemcpyHostToDevice), __LINE__);
@@ -823,17 +531,15 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 
 	dim3 blockSize(xDim, yDim);
         dim3 numBlocks(1,1);
-//printf("dim %d, %d\n", blockSize.x, blockSize.y);
-//printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
-	if(zStart+zLen> simSpace.size.z) 
-		zLen = simSpace.size.z-zStart;
 
-	// insert into materials matrrix using maskVal = 0
+	if(zStart+zLen> dSize.z) 
+		zLen = dSize.z-zStart;
+
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
 		return(retval);
 
-        extrudeZ<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, zLen, (char)0);
+        extrudeZ<<<numBlocks, blockSize>>>(dest, dSize, d_src, offset, zLen, (char)0);
 
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
@@ -845,8 +551,15 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 	return(retval);
 }
 
+
+extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
+{
+	return(_ExtrudeZArb(simSpace.d_mat_index, simSpace.size, src, xDim, yDim, xCenter, yCenter, zStart, zLen));
+}
+
+
 template <typename T>
-__global__ void extrudeY(T* dest, T* src, dim3 srcSize, dim3 offset, int yLen, T maskVal)
+__global__ void extrudeY(T* dest, dim3 destSize, T* src, dim3 offset, int yLen, T maskVal)
 {
 	int i   = threadIdx.x;
 	int j   = blockIdx.x*blockDim.y + threadIdx.y;
@@ -859,23 +572,24 @@ __global__ void extrudeY(T* dest, T* src, dim3 srcSize, dim3 offset, int yLen, T
 		int x = i+offset.x;
 		int y = offset.y;
 		int z = j+offset.z;
-		int globalIdx = c_my*c_mz*x + c_mz*y + z;
+		int globalIdx = destSize.y*destSize.z*x + destSize.z*y + z;
 		T* ptr = &dest[globalIdx];
 		while(count--)
 		{
 			*ptr = val;
-			ptr += c_mz;
+			ptr += destSize.z;
 		}
 	}
 }
 
 
-extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, int zCenter, int yStart, int yLen)
+template <typename T>
+static int _ExtrudeYArb(T* dest, dim3 dSize, char* src, int xDim, int zDim, int xCenter, int zCenter, int yStart, int yLen)
 {
 	int retval = 0;
 	char* d_src;
 	int numBytes = xDim * zDim * sizeof(char);
-	if(yStart>simSpace.size.y)
+	if(yStart>dSize.y)
 		return(-1);
 
 	// move src into GPU space
@@ -892,17 +606,15 @@ extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, 
 
 	dim3 blockSize(xDim, zDim);
         dim3 numBlocks(1,1);
-//printf("dim %d, %d\n", blockSize.x, blockSize.y);
-//printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
-	if(yStart+yLen> simSpace.size.y) 
-		yLen = simSpace.size.y-yStart;
 
-	// insert into materials matrrix using maskVal = 0
+	if(yStart+yLen> dSize.y) 
+		yLen = dSize.y-yStart;
+
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
 		return(retval);
 
-        extrudeY<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, yLen, (char)0);
+        extrudeY<<<numBlocks, blockSize>>>(dest, dSize, d_src, offset, yLen, (char)0);
 
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
@@ -914,9 +626,15 @@ extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, 
 	return(retval);
 }
 
+extern int SimulationSpace_ExtrudeY(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
+{
+	return(_ExtrudeYArb(simSpace.d_mat_index, simSpace.size,
+		src, xDim, yDim, xCenter, yCenter, zStart, zLen));
+}
+
 
 template <typename T>
-__global__ void extrudeX(T* dest, T* src, dim3 srcSize, dim3 offset, int xLen, T maskVal)
+__global__ void extrudeX(T* dest, dim3 destSize, T* src, dim3 offset, int xLen, T maskVal)
 {
 	int i   = threadIdx.x;
 	int j   = blockIdx.x*blockDim.y + threadIdx.y;
@@ -929,22 +647,23 @@ __global__ void extrudeX(T* dest, T* src, dim3 srcSize, dim3 offset, int xLen, T
 		int x = offset.x;
 		int y = i+offset.y;
 		int z = j+offset.z;
-		int globalIdx = c_my*c_mz*x + c_mz*y + z;
+		int globalIdx = destSize.y*destSize.z*x + destSize.z*y + z;
 		T* ptr = &dest[globalIdx];
 		while(count--)
 		{
 			*ptr = val;
-			ptr += c_my * c_mz;
+			ptr += destSize.y * destSize.z;
 		}
 	}
 }
 
-extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, int zCenter, int xStart, int xLen)
+template <typename T>
+static int _ExtrudeXArb(T* dest, dim3 dSize, char* src, int yDim, int zDim, int yCenter, int zCenter, int xStart, int xLen)
 {
 	int retval = 0;
 	char* d_src;
 	int numBytes = yDim * zDim * sizeof(char);
-	if(xStart>simSpace.size.x)
+	if(xStart>dSize.x)
 		return(-1);
 
 	// move src into GPU space
@@ -961,16 +680,14 @@ extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, 
 
 	dim3 blockSize(yDim, zDim);
         dim3 numBlocks(1,1);
-//printf("dim %d, %d\n", blockSize.x, blockSize.y);
-//printf("off %d, %d %d\n", offset.x, offset.y, offset.z);
-	if(xStart+xLen> simSpace.size.x) 
-		xLen = simSpace.size.x-xStart;
-	// insert into materials matrrix using maskVal = 0
+	if(xStart+xLen> dSize.x) 
+		xLen = dSize.x-xStart;
+
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
 		return(retval);
 
-        extrudeX<<<numBlocks, blockSize>>>(simSpace.d_mat_index, d_src, simSpace.size, offset, xLen, (char)0);
+        extrudeX<<<numBlocks, blockSize>>>(dest, dSize, d_src, offset, xLen, (char)0);
 
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
@@ -980,6 +697,13 @@ extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, 
 	retval += checkCuda( cudaFree(d_src), __LINE__  );
   
 	return(retval);
+}
+
+
+extern int SimulationSpace_ExtrudeX(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
+{
+	return(_ExtrudeXArb(simSpace.d_mat_index, simSpace.size,
+		src, xDim, yDim, xCenter, yCenter, zStart, zLen));
 }
 
 static int VectorField_Zero(struct vector_field* field, dim3 size)
@@ -1133,7 +857,7 @@ extern int SimulationSpace_Create(dim3* sim_size)
 		return(retval);
 	}
 
-	cpuWorkingSpace = (float*)malloc(bytes);
+//	cpuWorkingSpace = (float*)malloc(bytes);
 printf("%s allocating %d(kB) (%d, %d, %d)\n",__FUNCTION__, 6*3*bytes/1024, sim_size->x,sim_size->y,sim_size->z);
 	retval += SimulationSpace_CreateDim(sim_size, &simSpace);
 printf("spaces allocated, initializing\n");
@@ -1149,7 +873,7 @@ extern int SimulationSpace_Destroy(void)
 	int retval = 0;
 	retval += SimulationSpace_DestroyDim(&simSpace);
 
-	free(cpuWorkingSpace);
+//	free(cpuWorkingSpace);
 
 	return(retval);
 }
