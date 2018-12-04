@@ -12,7 +12,7 @@ CC = gcc
 #NVCC = /usr/local/cuda-9.1/bin/nvcc
 NVCC = nvcc
 NVCCFLAGS = -D_FORCE_INLINES -O2 -use_fast_math -DUCUDA -rdc=false
-NVCC_OBJ = finite-difference.o
+NVCC_OBJ = finite-difference.o resistor.o
 
 OBJECTS =  ../src/xpu.o ../src/material.o file_processing.o gpu_translate.o
 SRCS = $(PROJECT).c xpu.c frect.c material.c layer.c med_vect.c file_edit.c file_processing.c
