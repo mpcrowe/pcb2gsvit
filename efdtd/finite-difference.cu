@@ -557,6 +557,16 @@ extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, 
 	return(_ExtrudeZArb(simSpace.d_mat_index, simSpace.size, src, xDim, yDim, xCenter, yCenter, zStart, zLen));
 }
 
+extern int MatIndex_ExtrudeZ(char* dest, int dx, int dy, int dz, char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
+{
+	dim3 size;
+	size.x = dx;
+	size.y = dy;
+	size.z = dz;
+
+	return(_ExtrudeZArb(dest, size, src, xDim, yDim, xCenter, yCenter, zStart, zLen));
+}
+
 
 template <typename T>
 __global__ void extrudeY(T* dest, dim3 destSize, T* src, dim3 offset, int yLen, T maskVal)

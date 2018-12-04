@@ -30,5 +30,6 @@ extern void FD_UpdateDeltas(float dx, float dy, float dz);
 extern int SimulationSpace_ExtrudeY(char* src, int xDim, int zDim, int xCenter, int zCenter, int yStart, int yLen);
 extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int Zend);
 extern int SimulationSpace_ExtrudeX(char* src, int yDim, int zDim, int yCenter, int zCenter, int xStart, int xLen);
+extern int MatIndex_ExtrudeZ(char* dest, int dx, int dy, int dz, char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen);
 
 #endif
