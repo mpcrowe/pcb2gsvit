@@ -489,6 +489,57 @@ __global__ void arraySet(int n, T* ptr, T val)
 
 
 template <typename T>
+__global__ void insert(T* dest, dim3 dimDest, T* src, dim3 dimSrc, dim3 offset, T maskVal)
+{
+	int i   = threadIdx.x;
+	int j   = blockIdx.x*blockDim.y + threadIdx.y;
+	int srcIndex = i*blockDim.y + j;
+	int sz;
+
+	for(sz=0;sz<dimSrc.z;sz++)
+	{
+		T val = src[(srcIndex*dimSrc.z)+sz];
+		if(val !=maskVal)
+		{
+			int globalIdx = dimDest.y*dimDest.z*(i+offset.x) + dimDest.z*(j+offset.y ) + offset.z +sz;
+			T* ptr = &dest[globalIdx];
+			*ptr = val;
+		}
+	}
+}
+
+
+template <typename T>
+static int _FillArb(T* dest, dim3 dimDest, char* src, dim3 dimSrc, int xCenter, int yCenter, int zStart, T maskVal)
+{
+	int retval = 0;
+	char* d_src;
+//	int numBytes = dimSrc.x * dimSrc.y * sizeof(char);
+	if(zStart>dimDest.z)
+		return(-1);
+
+
+	// compute offset from dim and center
+	//compute number of blocks and threads to cover space
+	dim3 offset;
+	offset.x = xCenter-dimSrc.x/2;
+	offset.y = yCenter-dimSrc.y/2;
+	offset.z = zStart;
+
+	dim3 blockSize(dimSrc.x, dimSrc.y);
+        dim3 numBlocks(1,1);
+
+//	if(zStart+dimSrc.z> dimDest.z) 
+//		zLen = dimDest.z-zStart;
+
+        insert<<<numBlocks, blockSize>>>(dest, dimDest, d_src, dimSrc, offset, maskVal);
+
+	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
+	return(retval);
+}
+
+
+template <typename T>
 __global__ void extrudeZ(T* dest, dim3 destSize, T* src, dim3 offset, int zLen, T maskVal)
 {
 	int i   = threadIdx.x;
@@ -508,12 +559,13 @@ __global__ void extrudeZ(T* dest, dim3 destSize, T* src, dim3 offset, int zLen, 
 	}
 }
 
+
 template <typename T>
-static int _ExtrudeZArb(T* dest, dim3 dSize, char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
+static int _ExtrudeZArb(T* dest, dim3 dSize, T* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen, T maskVal)
 {
 	int retval = 0;
-	char* d_src;
-	int numBytes = xDim * yDim * sizeof(char);
+	T* d_src;
+	int numBytes = xDim * yDim * sizeof(T);
 	if(zStart>dSize.z)
 		return(-1);
 
@@ -539,7 +591,7 @@ static int _ExtrudeZArb(T* dest, dim3 dSize, char* src, int xDim, int yDim, int 
 	if(retval)
 		return(retval);
 
-        extrudeZ<<<numBlocks, blockSize>>>(dest, dSize, d_src, offset, zLen, (char)0);
+        extrudeZ<<<numBlocks, blockSize>>>(dest, dSize, d_src, offset, zLen, maskVal);
 
 	retval += checkCuda(cudaDeviceSynchronize(), __LINE__);
 	if(retval)
@@ -554,7 +606,7 @@ static int _ExtrudeZArb(T* dest, dim3 dSize, char* src, int xDim, int yDim, int 
 
 extern int SimulationSpace_ExtrudeZ(char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
 {
-	return(_ExtrudeZArb(simSpace.d_mat_index, simSpace.size, src, xDim, yDim, xCenter, yCenter, zStart, zLen));
+	return(_ExtrudeZArb(simSpace.d_mat_index, simSpace.size, src, xDim, yDim, xCenter, yCenter, zStart, zLen, (char)0));
 }
 
 extern int MatIndex_ExtrudeZ(char* dest, int dx, int dy, int dz, char* src, int xDim, int yDim, int xCenter, int yCenter, int zStart, int zLen)
@@ -564,7 +616,7 @@ extern int MatIndex_ExtrudeZ(char* dest, int dx, int dy, int dz, char* src, int 
 	size.y = dy;
 	size.z = dz;
 
-	return(_ExtrudeZArb(dest, size, src, xDim, yDim, xCenter, yCenter, zStart, zLen));
+	return(_ExtrudeZArb(dest, size, src, xDim, yDim, xCenter, yCenter, zStart, zLen,(char)0));
 }
 
 
