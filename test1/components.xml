@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<components>
+	<comment>Made with PCB gsvit export HID</comment>
+	<default_spacial_unit>mils</default_spacial_unit>
+
+	<material id='pad_copper'>
+		<relativePermittivity>1.0</relativePermittivity>
+		<conductivity>6.3e7</conductivity>
+	</material>
+
+	<material id='res_substrate'>
+		<relativePermittivity>8.0</relativePermittivity>
+		<conductivity>0</conductivity>
+	</material>
+
+	<component>
+		<type>resistor</type>
+		<description>0603__ROHM</description>
+		<pad name="t1">
+			<width>3</width>
+			<thickness>1</thickness>
+			<length>2</length>
+			<thickness>1</thickness>
+			<material>/components/material[@id='pad_copper']</material>
+		</pad>
+		<dimensions>
+			<width>3</width>
+			<lenth>6</length>
+			<thickness>1</thickness>
+			<substrate>res_substrate</substrate>
+			<pad id="p1">../pad[@name='t1']</pad>
+			<pad id="p2">../pad[@name='t1']</pad>
+		</dimensions>
+	</component>
+</components>
