@@ -57,6 +57,15 @@ extern char* XPU_GetFilename(xmlDocPtr doc, const char* parentDocName, char* des
 }
 
 
+// used to peek at the document to see if its something we want to look at
+extern xmlChar* XPU_GetRootElementName(xmlDocPtr doc)
+{
+	xmlNodePtr pRoot = xmlDocGetRootElement(doc);
+	xmlChar* pName = (xmlChar*)pRoot->name;
+	//printf("%s, root:(%s)\n", __FUNCTION__, pName);
+	return(pName);
+}
+
 xmlChar* XPU_SimpleLookup(xmlDocPtr doc, char* xpathString)
 {
 	xmlXPathContextPtr xpathCtx;

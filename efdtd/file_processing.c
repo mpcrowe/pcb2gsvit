@@ -239,22 +239,12 @@ processingFault:
 	return(retval);
 }
 
-// main processing of xml files here
-extern int FP_ProcessFile(char* fname, int verbose, int silent)
+
+static error_t processBoardDoc(xmlDocPtr boardDoc, char* fpath)
 {
 	error_t retval = 0;
-	xmlDocPtr boardDoc;
-	xmlDocPtr xemDoc;
-	char* xemFilename;
-
-	fp_verbose = verbose;
-	// Load XML document
-	boardDoc = xmlParseFile(fname);
-	if (boardDoc == NULL)
-	{
-		fprintf(stderr, "Error: unable to parse File \"%s\"\n", fname);
-		return(-1);
-	}
+        xmlDocPtr xemDoc;
+        char* xemFilename;
 
 	// determine xml file typ by looking at root level doc
 //	xmlNodeSetPtr boardDocFrag = XPU_GetNodeSet(boardDoc, XPATH_XEM_BOARD_DOC);
@@ -262,12 +252,12 @@ extern int FP_ProcessFile(char* fname, int verbose, int silent)
 //		goto processingFault;
 
 	// create the materials table
-	retval = MATRL_CreateTable(boardDoc, verbose);
+	retval = MATRL_CreateTable(boardDoc, fp_verbose);
 	if(retval)
 		goto processingFault;
 
 	// get xem filename
-	xemFilename = getXemFilename(boardDoc, fname);
+	xemFilename = getXemFilename(boardDoc, fpath);
 	if(xemFilename != NULL)
 	{
 		fprintf(stdout, "%s\n",xemFilename);
@@ -315,7 +305,7 @@ extern int FP_ProcessFile(char* fname, int verbose, int silent)
 
 	FP_ProcessLayers(xnsPtr);
 
-	char* riffFilename = getRiffFilename(boardDoc, fname);
+	char* riffFilename = getRiffFilename(boardDoc, fpath);
 	if(riffFilename != NULL)
 	{
 		FP_ReadRiff(riffFilename);
@@ -329,8 +319,48 @@ extern int FP_ProcessFile(char* fname, int verbose, int silent)
 		if(xnsDrills != NULL)
 			FP_ProcessDrillNodeSet(xnsDrills, zPcbBottomVoxel, zPcbTopVoxel, 1);
 	}
-
 processingFault:
+	return(retval);
+}
+
+xmlDocPtr componentDoc = NULL;
+
+#define BOARD_INFO "boardInformation"
+#define COMPONENT_INFO "components"
+// main processing of xml files here
+extern int FP_ProcessFile(char* fname, int verbose, int silent)
+{
+	error_t retval = 0;
+	xmlDocPtr xmlDoc;
+//	xmlDocPtr xemDoc;
+//	char* xemFilename;
+
+	fp_verbose = verbose;
+	// Load XML document
+	xmlDoc = xmlParseFile(fname);
+	if( xmlDoc == NULL)
+	{
+		fprintf(stderr, "Error: unable to parse File \"%s\"\n", fname);
+		return(-1);
+	}
+
+	char* pRoot = (char*)XPU_GetRootElementName(xmlDoc);
+	fprintf(stdout, "\"%s\" has rootname \"%s\"\n", fname, pRoot);
+
+	if(strncmp(pRoot, BOARD_INFO, strlen(BOARD_INFO)) == 0 )
+	{
+		retval = processBoardDoc(xmlDoc, fname);
+	}
+	else if(strncmp(pRoot, COMPONENT_INFO, strlen(COMPONENT_INFO)) == 0 )
+	{
+		componentDoc = xmlDoc;
+	}
+	else
+	{
+		fprintf(stderr, "Error: unable to parse document \"%s\" with root node \"%s\"\n", fname, pRoot);
+		return(-1);
+	}
+
 	return(retval);
 }
 

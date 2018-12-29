@@ -25,5 +25,6 @@ xmlNodeSetPtr XPU_GetNodeSetFromNode(xmlNodePtr node, char* xpathString);
 double XPU_GetDouble(xmlDocPtr doc, char* xpath);
 
 extern char* XPU_GetFilename(xmlDocPtr doc, const char* parentDocName, char* dest, const char* xpath);
+extern xmlChar* XPU_GetRootElementName(xmlDocPtr doc);
 
 #endif

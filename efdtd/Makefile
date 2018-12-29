@@ -49,7 +49,7 @@ ALINK = $(CC) $(ALFLAGS)
 all: $(PROJECT)
 
 test: $(PROJECT)
-	./$(PROJECT) ../test1/boardInfo.xml
+	./$(PROJECT) ../test1/components.xml ../test1/boardInfo.xml
 
 #docs:
 #	doxygen Doxyfile
